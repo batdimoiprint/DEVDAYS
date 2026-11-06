@@ -1,14 +1,13 @@
 # Cue-pid character matcher
 
 ## Goal
-Let a player spin two groups of character names, see the resulting match, and create a short AI video of the pair.
+Choose a couple at random using a two-pointer wheel, then show the match and its video in a modal.
 
-## Scope and acceptance
-- Players can edit the male and female name lists and spin both rings of a wheel; the two pointers indicate the names that match the revealed result.
-- The existing Cue-pid match results and trailer remain available. The room-matching mode is removed.
-- A player can request a Veo video for the selected pair, see progress and failures, and play the finished video.
-- Google credentials stay server-side. Video generation is protected by an access code to prevent anonymous use of a paid API key.
-- Missing configuration and provider errors are shown clearly. No real paid generation is required for local verification.
+## Acceptance
+- Each spin selects one of three pairs: Gehlee and Jeo Ong, Queen Leng and Xander Ford, or Kara David and Dinorobong Tubo. Both pointers land on the selected names.
+- The modal shows the couple immediately after the wheel stops and can be dismissed. Possible pairs remain readable below the wheel.
+- The first two pairs show a loading placeholder, then play their assigned local video as soon as it is ready. The third pair shows a waiting message until its video is added.
+- The page uses solid colors, plays no background music, and makes no paid video-generation requests.
 
 ## Approach
-Keep the existing prototype as the interface, serve it from Next.js, and add a wheel interaction to its duo flow. Add server route handlers for starting and polling a Gemini Veo operation and proxying its result. Use environment variables for the Gemini key and access code. Document setup and cost considerations.
+The Next.js app serves the Cue-pid prototype and the two supplied videos from `public/`. The existing Veo API remains available for future integration but is not called by the page.

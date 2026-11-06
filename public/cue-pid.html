@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>cue-pid</title>
 <style>
-  :root{--pink:#ff4d8d;--deep:#2b0a3d;--gold:#ffd166;--card:#fff7fb;--ink:#2b0a3d}
+  :root{--pink:#a51f50;--deep:#2b0a3d;--gold:#ffd166;--card:#fff7fb;--ink:#2b0a3d}
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#fff;
-    background:radial-gradient(circle at 20% 0%,#7b2cbf 0,#2b0a3d 55%,#12031c 100%);min-height:100vh;padding:20px 16px 60px}
+    background:#24152f;min-height:100vh;padding:20px 16px 60px}
   .wrap{max-width:560px;margin:0 auto}
   h1{font-size:2.6rem;margin:6px 0 0;letter-spacing:-1px;text-align:center}
-  h1 span{color:var(--pink)}
-  .tag{text-align:center;opacity:.85;margin:4px 0 18px;font-size:.95rem}
+  h1 span{color:#ff9abd}
+  .tag{text-align:center;color:#fff;margin:4px 0 18px;font-size:1rem}
   .panel{background:#ffffff14;border:1px solid #ffffff22;border-radius:16px;padding:16px}
   input,textarea{width:100%;padding:12px;border-radius:10px;border:none;font-size:1rem;margin-bottom:10px;font-family:inherit}
   textarea{min-height:110px;resize:vertical}
   .plus{text-align:center;font-size:1.4rem;margin:-4px 0 6px}
-  button.go{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(90deg,var(--pink),#ff8a5c);
+  button.go{width:100%;padding:14px;border:none;border-radius:12px;background:#bf235d;
     color:#fff;font-size:1.05rem;font-weight:800;cursor:pointer}
   button.go:active{transform:scale(.98)}
   .loading{text-align:center;padding:30px 10px;font-weight:700}
@@ -26,40 +26,49 @@
   .card{background:var(--card);color:var(--ink);border-radius:18px;padding:18px;margin-top:16px;
     box-shadow:0 10px 30px #0006;animation:pop .35s ease}
   @keyframes pop{from{transform:scale(.92);opacity:0}}
-  .pair{font-size:.9rem;opacity:.7;text-align:center}
-  .ship{font-size:2.1rem;font-weight:900;text-align:center;color:var(--pink);margin:2px 0}
+  .pair{font-size:1rem;color:#57465a;text-align:center}
+  .ship{font-size:clamp(1.4rem,5vw,2.1rem);font-weight:900;text-align:center;color:var(--pink);margin:2px 0}
   .tier{text-align:center;font-weight:800;margin-bottom:10px}
   .bar{height:16px;background:#e8d5e8;border-radius:99px;overflow:hidden}
-  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff4d8d,#ffd166);transition:width 1.2s ease}
+  .bar i{display:block;height:100%;width:0;background:#bf235d;transition:width 1.2s ease}
   .score{text-align:center;font-weight:900;font-size:1.4rem;margin:6px 0 10px}
   .row{margin:10px 0;font-size:.95rem;line-height:1.4}
   .row b{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:#8a3a8a}
   .quote{border-left:4px solid var(--pink);padding-left:10px;font-style:italic}
-  .tiny{font-size:.72rem;opacity:.6;margin-top:10px;text-align:center}
+  .tiny{font-size:.85rem;color:#e9dfea;margin-top:10px;text-align:center}
   .copy{margin-top:10px;width:100%;padding:9px;border-radius:10px;border:2px dashed var(--pink);background:transparent;color:var(--pink);font-weight:700;cursor:pointer}
   .mini{display:flex;justify-content:space-between;align-items:center;gap:10px}
   .mini .ship{font-size:1.2rem;text-align:left}
   .mini .s{font-weight:900;font-size:1.3rem}
-  .lang{display:flex;justify-content:center;gap:6px;margin-bottom:4px}
+  .lang{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-bottom:4px}
   .lang button{padding:5px 12px;border-radius:99px;border:1px solid #ffffff44;background:transparent;color:#fff;font-weight:700;cursor:pointer;font-size:.8rem}
-  .lang button#musicBtn{margin-left:8px;border-style:dashed}
   .lang button.on{background:#fff;color:#2b0a3d}
   .hide{display:none}
   .wheel-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .wheel-inputs[hidden]{display:none}
   .wheel-inputs label{font-weight:700;font-size:.8rem}
   .wheel-inputs textarea{margin-top:6px;min-height:78px;font-size:.85rem}
   .wheels{display:flex;justify-content:center;margin:18px 0}
-  .wheel-stage{position:relative;width:min(76vw,320px);aspect-ratio:1;margin:20px 0}
+  .wheel-stage{position:relative;width:min(100%,400px);aspect-ratio:1;margin:20px 0}
   .wheel-pointer{position:absolute;left:50%;transform:translateX(-50%);color:var(--gold);font-size:25px;line-height:1;z-index:3;white-space:nowrap}
-  .wheel-pointer span{font-size:11px;vertical-align:middle;color:#fff}
-  .female-pointer{top:-25px}.male-pointer{top:76%}
+  .wheel-pointer span{font-size:13px;font-weight:700;vertical-align:middle;color:#fff}
+  .female-pointer{top:-25px}.male-pointer{top:79%}
   .wheel{position:absolute;border:4px solid #ffd166;border-radius:50%;transition:transform 3s cubic-bezier(.12,.74,.15,1);box-shadow:0 6px 24px #0006}
   #femaleWheel{inset:0;width:100%;height:100%}
-  #maleWheel{inset:24%;width:52%;height:52%;z-index:1;border-color:#fff}
+  #maleWheel{inset:21%;width:58%;height:58%;z-index:1;border-color:#fff}
   .spin-result{text-align:center;font-weight:800;min-height:1.5em;margin-bottom:10px}
+  .pair-list{list-style:none;padding:0;margin:12px 0 18px;font-size:1rem;line-height:1.5}
+  .pair-list li{padding:5px 0;border-bottom:1px solid #ffffff33;text-align:center}
+  button:focus-visible{outline:3px solid #ffd166;outline-offset:3px}
+  dialog{width:min(520px,calc(100% - 32px));max-height:90vh;overflow:auto;border:0;padding:0;background:transparent}
+  dialog::backdrop{background:#12031ccc}
+  dialog .card{margin:0;position:relative}
+  .close-modal{position:absolute;z-index:2;right:12px;top:12px;border:0;background:transparent;color:var(--deep);font-size:1.5rem;cursor:pointer}
   .video-code{margin-top:8px;border:1px solid #ead0df}
   .video-note{font-size:.8rem;line-height:1.4}
-  video{max-width:100%;border-radius:10px;margin-top:10px}
+  .video-placeholder{display:grid;place-items:center;aspect-ratio:16/9;margin-top:14px;border-radius:10px;background:#e8dfe7;color:#514353;font-size:.9rem}
+  video{display:block;width:100%;border-radius:10px;margin-top:14px}
+  video[hidden]{display:none}
   button:disabled{opacity:.55;cursor:wait}
   @media(prefers-reduced-motion:reduce){.wheel{transition-duration:.01s}}
 
@@ -67,20 +76,18 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="lang"><button data-l="tl" class="on">Taglish</button><button data-l="en">English</button><button id="musicBtn" type="button">Musika: On</button></div>
+  <div class="lang"><button data-l="tl" class="on">Taglish</button><button data-l="en">English</button></div>
   <h1>cue-<span>pid</span></h1>
-  <div class="tag" id="tag">Pumili ng mga pangalan at tingnan ang match.</div>
+  <div class="tag" id="tag">Paikutin ang wheel para makita ang match.</div>
 
   <div class="panel" id="duo">
-    <div class="wheel-inputs">
-      <label>Female characters<textarea id="femaleNames" aria-label="Female character names">Anna
-Mia
-Luna
-Sofia</textarea></label>
-      <label>Male characters<textarea id="maleNames" aria-label="Male character names">Marco
-Kai
-Leo
-Ethan</textarea></label>
+    <div class="wheel-inputs" hidden>
+      <label>Female characters<textarea id="femaleNames" aria-label="Female character names" readonly>Gehlee
+Queen Leng
+Kara David</textarea></label>
+      <label>Male characters<textarea id="maleNames" aria-label="Male character names" readonly>Jeo Ong
+Xander Ford
+Dinorobong Tubo</textarea></label>
     </div>
     <div class="wheels"><div class="wheel-stage">
       <div class="wheel-pointer female-pointer" aria-hidden="true"><span>FEMALE</span> ▼</div>
@@ -88,23 +95,29 @@ Ethan</textarea></label>
       <svg id="maleWheel" class="wheel" viewBox="0 0 200 200" aria-label="Male character wheel"></svg>
       <div class="wheel-pointer male-pointer" aria-hidden="true">▲ <span>MALE</span></div>
     </div></div>
-    <div id="spinResult" class="spin-result" aria-live="polite">Add names and spin to find a match.</div>
+    <ul class="pair-list" aria-label="Possible matches">
+      <li>Gehlee + Jeo Ong</li>
+      <li>Queen Leng + Xander Ford</li>
+      <li>Kara David + Dinorobong Tubo</li>
+    </ul>
+    <div id="spinResult" class="spin-result" aria-live="polite">Spin to find a match.</div>
     <button class="go" id="spinWheel" type="button">Spin the wheel</button>
-    <p style="text-align:center;font-size:.8rem;opacity:.8">Or enter two names directly</p>
+    <div hidden>
     <input id="n1" placeholder="Pangalan #1 (e.g. Mark)" autocomplete="off">
     <div class="plus">+</div>
     <input id="n2" placeholder="Pangalan #2 (e.g. Anna)" autocomplete="off">
     <button class="go" id="goDuo">Cue the Music</button>
+    </div>
   </div>
 
-  <div id="out"></div>
+  <dialog id="out" aria-label="Your match"></dialog>
   <div class="tiny" id="foot" style="margin-top:20px">For entertainment only.</div>
 </div>
 
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const cap=s=>s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();
+const cap=s=>s.split(/\s+/).map(word=>word.charAt(0).toUpperCase()+word.slice(1).toLowerCase()).join(" ");
 
 // deterministic randomness: same pair => same fate, always
 function hash(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19}return h>>>0}
@@ -512,42 +525,42 @@ const D=()=>LANG==='en'?EN:TL;
 
 const UI={
  tl:{
-  tag:"Pumili ng mga pangalan at tingnan ang match.",
+  tag:"Paikutin ang wheel para makita ang match.",
   n1:"Pangalan #1 (e.g. Mark)",n2:"Pangalan #2 (e.g. Anna)",
   goDuo:"Tingnan ang match",
   foot:"Para sa katuwaan lang.",
-  errDuo:"Dalawang pangalan po, hindi po marunong mag-match si Cue-pid ng hangin.",
-  selfLove:a=>`${a} + ${a}? Self-love arc! Narcissus nod, pero respeto. Mag-date kayo sa salamin.`,
+  errDuo:"Maglagay ng dalawang pangalan.",
+  selfLove:a=>`${a} + ${a}: self-love match.`,
   tagSuf:"ForeverChar",
   alt:"alt name:",scoreSuf:"kilig",
   art:"Larawan ng match",save:"I-save ang larawan (PNG)",
   story:(s,g)=>`Ang Kwento ng ${s} (${g})`,ep1:"Ep. 1: Ang Pagkikita",ep2:"Ep. 2: Ang Gulo",ep3:"Finale: Ang Wakas",
-  pun:"Banat ni Cue-pid",trailerRow:"Opisyal na Trailer (video, 24 segundo)",trailerBtn:"Gumawa ng Trailer",
-  confession:"Confession Room",twist:"Next Episode Plot Twist",green:"Green flag",red:"Red flag",
+  pun:"Banat ni Cue-pid",trailerRow:"Trailer (24 segundo)",trailerBtn:"Gumawa ng trailer",
+  confession:"Confession Room",twist:"Next episode",green:"Green flag",red:"Red flag",
   side:"Kilig side effects",friend:"Mutual friend na magpapalala",hashtag:"Official hashtag",
   musicOn:"Musika: On",musicOff:"Musika: Off",
-  copy:"Copy para sa GC",copied:"Na-copy! Ipadala mo na sa GC",copiedShort:"Na-copy!",
-  rendering:"Nire-render ang trailer...",download:e=>"I-download ang trailer (."+e+")",replay:"Ulitin ang Trailer",
+  copy:"Copy para sa GC",copied:"Na-copy na",copiedShort:"Na-copy!",
+  rendering:"Nire-render ang trailer...",download:e=>"I-download ang trailer (."+e+")",replay:"Ulitin ang trailer",
   aGenre:g=>"Isang "+g,scoreCap:"KILIG SCORE",
   copyText:m=>`cue-pid says: ${m.a} + ${m.b} = ${m.ship}\nKilig score: ${m.score}/100 (${m.tier.name})\n"${m.confession}"\n${m.tag}`
  },
  en:{
-  tag:"Add names and see who matches.",
+  tag:"Spin the wheel to see your match.",
   n1:"Name #1 (e.g. Mark)",n2:"Name #2 (e.g. Anna)",
   goDuo:"See the match",
   foot:"For entertainment only.",
-  errDuo:"Two names please. Cue-pid can't match thin air.",
-  selfLove:a=>`${a} + ${a}? Self-love arc! A nod to Narcissus, but respect. Go on a date in the mirror.`,
+  errDuo:"Enter two names.",
+  selfLove:a=>`${a} + ${a}: a self-love match.`,
   tagSuf:"Forever",
   alt:"alt name:",scoreSuf:"butterflies",
   art:"Match portrait",save:"Save picture (PNG)",
   story:(s,g)=>`The Story of ${s} (${g})`,ep1:"Ep. 1: The Meet-Cute",ep2:"Ep. 2: The Mess",ep3:"Finale: The Ending",
-  pun:"Cue-pid's Pickup Line",trailerRow:"Official Trailer (video, 24 seconds)",trailerBtn:"Make Trailer",
-  confession:"Confession Room",twist:"Next Episode Plot Twist",green:"Green flag",red:"Red flag",
+  pun:"Pickup line",trailerRow:"Trailer (24 seconds)",trailerBtn:"Make trailer",
+  confession:"Confession Room",twist:"Next episode",green:"Green flag",red:"Red flag",
   side:"Butterfly side effects",friend:"Mutual friend who will make it worse",hashtag:"Official hashtag",
   musicOn:"Music: On",musicOff:"Music: Off",
-  copy:"Copy for the group chat",copied:"Copied! Send it to the group chat",copiedShort:"Copied!",
-  rendering:"Rendering trailer...",download:e=>"Download trailer (."+e+")",replay:"Replay Trailer",
+  copy:"Copy for the group chat",copied:"Copied",copiedShort:"Copied!",
+  rendering:"Rendering trailer...",download:e=>"Download trailer (."+e+")",replay:"Replay trailer",
   aGenre:g=>"A "+g,scoreCap:"BUTTERFLIES SCORE",
   copyText:m=>`cue-pid says: ${m.a} + ${m.b} = ${m.ship}\nButterflies score: ${m.score}/100 (${m.tier.name})\n"${m.confession}"\n${m.tag}`
  }
@@ -555,42 +568,15 @@ const UI={
 const U=()=>UI[LANG];
 
 function cardHTML(m){
-  const u=U();
-  const text=u.copyText(m);
   return `<div class="card">
-    <div class="pair">${esc(m.a)} + ${esc(m.b)}</div>
-    <div class="ship">${esc(m.ship)}</div>
-    <div class="pair">${u.alt} ${esc(m.alt)}</div>
-    <div class="tier" style="margin-top:8px">${m.tier.name}</div>
-    <div class="bar"><i data-w="${m.score}"></i></div>
-    <div class="score">${m.score}/100 ${u.scoreSuf}</div>
-    <div class="row">${esc(m.line)}</div>
-    <div class="row"><b>${u.art}</b>${sceneSVG(m)}
-      <button class="copy save" style="margin-top:8px">${u.save}</button></div>
-    <div class="row"><b>${esc(u.story(m.ship,m.story.genre))}</b>
-      <p style="margin:6px 0"><strong>${u.ep1}.</strong> ${esc(m.story.parts[0])}</p>
-      <p style="margin:6px 0"><strong>${u.ep2}.</strong> ${esc(m.story.parts[1])}</p>
-      <p style="margin:6px 0"><strong>${u.ep3}.</strong> ${esc(m.story.parts[2])}</p></div>
-    <div class="row"><b>${u.pun}</b>${esc(m.pun)}</div>
-    <div class="row"><b>${u.trailerRow}</b><button class="go trailer" style="margin-top:6px">${u.trailerBtn}</button><div id="trailerBox"></div></div>
-    <div class="row"><b>AI video of your match</b>
-      <p class="video-note">Generate a short Veo video. This uses the owner's paid Google API account.</p>
-      <input class="video-code" type="password" placeholder="Video access code" autocomplete="off" aria-label="Video access code">
-      <button class="go ai-video" type="button">Generate AI video</button><div class="ai-status" role="status" aria-live="polite"></div>
-    </div>
-    <div class="row"><b>${u.confession}</b><span class="quote">"${esc(m.confession)}"</span></div>
-    <div class="row"><b>${u.twist}</b>${esc(m.twist)}</div>
-    <div class="row"><b>${u.green}</b>${esc(m.a)} ${esc(m.green)}</div>
-    <div class="row"><b>${u.red}</b>${esc(m.b)} ${esc(m.red)}</div>
-    <div class="row"><b>${u.side}</b>${esc(m.side)}</div>
-    <div class="row"><b>${u.friend}</b>${esc(m.friend)}</div>
-    <div class="row"><b>${u.hashtag}</b>${esc(m.tag)}</div>
-    <button class="copy" data-copy="${encodeURIComponent(text)}">${u.copy}</button>
+    <form method="dialog"><button class="close-modal" aria-label="Close">×</button></form>
+    <div class="pair">Your match</div>
+    <div class="ship">${esc(m.a)} + ${esc(m.b)}</div>
+    <div class="ai-status" role="status" aria-live="polite"></div>
   </div>`;
 }
 
-
-let AC=null,MASTER=null,MDEST=null,MUSIC_ON=true,CUR_BUS=null,NBUF=null;
+let AC=null,MASTER=null,MDEST=null,MUSIC_ON=false,CUR_BUS=null,NBUF=null;
 function audioCtx(){
   if(!AC){
     const AX=window.AudioContext||window.webkitAudioContext;if(!AX)return null;
@@ -776,7 +762,7 @@ function sceneSVG(m){
     `<circle cx="${x-19}" cy="124" r="5" fill="#ff8aa8" opacity=".6"/><circle cx="${x+19}" cy="124" r="5" fill="#ff8aa8" opacity=".6"/>`+
     `<path d="M${x-8},124 Q${x},132 ${x+8},124" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/>`+
     `<text x="${x}" y="190" text-anchor="middle" font-size="26" font-weight="900" fill="#fff" font-family="Arial,sans-serif">${esc(ini)}</text>`};
-  const grad=(c1,c2)=>`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="400" height="240" fill="url(#g)"/>`;
+  const grad=(color)=>`<rect width="400" height="240" fill="${color}"/>`;
   let bg='';
   if(theme==='rain'){
     bg=grad('#6a7b99','#2f3b52');
@@ -814,9 +800,7 @@ function drawTrailer(ctx,img,m,SEG,t){
   const s=SEG.find(x=>t>=x.t&&t<x.t+x.d)||SEG[SEG.length-1];
   const p=Math.min(1,Math.max(0,(t-s.t)/s.d));
   if(s.type==='title'||s.type==='end'){
-    const g=ctx.createLinearGradient(0,0,0,H);
-    if(s.type==='title'){g.addColorStop(0,'#7b2cbf');g.addColorStop(1,'#12031c')}else{g.addColorStop(0,'#ff4d8d');g.addColorStop(1,'#2b0a3d')}
-    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=s.type==='title'?'#2b0a3d':'#bf235d';ctx.fillRect(0,0,W,H);
     for(let i=0;i<10;i++){ctx.fillStyle='rgba(255,255,255,'+(0.12+(i%3)*0.07)+')';heart(ctx,(i*97+t*20)%W,H-((t*45+i*61)%(H+40)),6+(i%4)*3)}
     if(s.type==='title'){
       ctx.fillStyle='rgba(255,255,255,'+Math.min(1,p*3)+')';ctx.font='600 20px system-ui,sans-serif';ctx.fillText('cue-pid presents',W/2,130);
@@ -843,8 +827,7 @@ function drawTrailer(ctx,img,m,SEG,t){
     let ox=0,oy=0;if(s.shake){ox=Math.sin(t*50)*5*(1-p);oy=Math.cos(t*43)*4*(1-p)}
     const w=800*z,h=480*z;
     ctx.drawImage(img,400-w/2+ox,225-h/2+oy,w,h);
-    const gg=ctx.createLinearGradient(0,230,0,H);gg.addColorStop(0,'rgba(0,0,0,0)');gg.addColorStop(1,'rgba(0,0,0,.88)');
-    ctx.fillStyle=gg;ctx.fillRect(0,230,W,220);
+    ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(0,230,W,220);
     if(s.hearts){ctx.fillStyle='rgba(255,77,141,.85)';for(let i=0;i<14;i++)heart(ctx,(i*61+30)%W,H-((t*70+i*43)%(H+30)),7+(i%4)*4)}
     if(s.shake&&p<.1){ctx.fillStyle='rgba(255,0,0,'+(0.3*(1-p/.1))+')';ctx.fillRect(0,0,W,H)}
     ctx.fillStyle='#000';ctx.fillRect(0,0,W,34);
@@ -914,14 +897,13 @@ function animateBars(){
 }
 
 function theatrics(then){
-  const out=$('#out');let i=0;
-  out.innerHTML=`<div class="loading"><span class="heart">💗</span><div id="lm">${D().LOADING[0]}</div></div>`;
-  const t=setInterval(()=>{i=(i+1)%D().LOADING.length;const el=$('#lm');if(el)el.textContent=D().LOADING[i]},500);
-  setTimeout(()=>{clearInterval(t);then();animateBars()},1800);
+  const out=$('#out');
+  out.innerHTML=`<div class="loading">${LANG==='tl'?'Hinahanap ang match...':'Finding your match...'}</div>`;
+  setTimeout(()=>{then();animateBars()},1800);
 }
 
 // Each pointer aligns with the centre of its chosen segment.
-const wheelColors=['#ff4d8d','#7b2cbf','#ff8a5c','#4633a8','#d655a4','#8054c8','#e58c4c','#a74672'];
+const wheelColors=['#8d1748','#4d287b','#8a3719'];
 const lists=id=>$(id).value.split(/[\n,]+/).map(x=>x.trim()).filter(Boolean).slice(0,12);
 let turns=[0,0];
 function drawWheel(el,names){
@@ -931,7 +913,10 @@ function drawWheel(el,names){
     const x1=100+99*Math.cos(a),y1=100+99*Math.sin(a),x2=100+99*Math.cos(b),y2=100+99*Math.sin(b);
     const path=n===1?'<circle cx="100" cy="100" r="99" fill="'+wheelColors[0]+'"/>':'<path d="M100 100 L'+x1+' '+y1+' A99 99 0 '+(n>1&&1/n>.5?1:0)+' 1 '+x2+' '+y2+' Z" fill="'+wheelColors[i%wheelColors.length]+'"/>';
     const angle=360*(i+.5)/n-90;
-    return path+'<text x="176" y="104" transform="rotate('+angle+' 100 100)" fill="white" font-size="'+(n>8?8:11)+'" font-weight="bold" text-anchor="middle">'+esc(name.slice(0,11))+'</text>';
+    const x=el.id==='femaleWheel'?178:170;
+    const words=name.split(/\s+/);
+    const lines=words.map((word,index)=>'<tspan x="'+x+'" dy="'+(index===0?-(words.length-1)*5:11)+'"'+(word.length>9?' textLength="62" lengthAdjust="spacingAndGlyphs"':'')+'>'+esc(word)+'</tspan>').join('');
+    return path+'<text x="'+x+'" y="104" transform="rotate('+angle+' 100 100) rotate(90 '+x+' 100)" fill="white" font-size="11" font-weight="bold" text-anchor="middle">'+lines+'</text>';
   }).join('');
 }
 function renderWheels(){drawWheel($('#femaleWheel'),lists('#femaleNames'));drawWheel($('#maleWheel'),lists('#maleNames'))}
@@ -940,45 +925,41 @@ $('#spinWheel').onclick=()=>{
   const groups=[lists('#femaleNames'),lists('#maleNames')];
   if(groups.some(x=>!x.length)){ $('#spinResult').textContent='Add at least one name to each wheel.';return }
   const button=$('#spinWheel');button.disabled=true;$('#femaleNames').disabled=true;$('#maleNames').disabled=true;
+  const pairIndex=Math.floor(Math.random()*groups[0].length);
   const chosen=groups.map((names,i)=>{
-    const index=Math.floor(Math.random()*names.length);
+    const index=pairIndex;
     const target=((i===1?180:0)-360*(index+.5)/names.length+360)%360;
     turns[i]+=1800+((target-turns[i]%360+360)%360);
     $(["#femaleWheel","#maleWheel"][i]).style.transform='rotate('+turns[i]+'deg)';
     return names[index];
   });
-  $('#spinResult').textContent='Finding your match…';
+  $('#spinResult').textContent='Finding your match...';
   const delay=matchMedia('(prefers-reduced-motion: reduce)').matches?50:3000;
   setTimeout(()=>{button.disabled=false;$('#femaleNames').disabled=false;$('#maleNames').disabled=false;$('#spinResult').textContent=chosen.join(' + ');$('#n1').value=chosen[0];$('#n2').value=chosen[1];$('#goDuo').click()},delay);
 };
 
-document.addEventListener('click',async e=>{
-  const btn=e.target.closest('.ai-video');if(!btn||!LASTM)return;
-  const card=btn.closest('.card'),status=card.querySelector('.ai-status'),code=card.querySelector('.video-code').value;
-  if(!code){status.textContent='Enter the video access code.';return}
-  btn.disabled=true;status.textContent='Starting your video…';
-  const request=async body=>{const r=await fetch('/api/video',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,code})});if(!r.ok){const d=await r.json();throw Error(d.error||'Video generation failed.')}return r};
-  try{
-    const start=await (await request({action:'start',female:LASTM.a,male:LASTM.b})).json();
-    let complete=false;
-    for(let i=0;i<90;i++){
-      await new Promise(resolve=>setTimeout(resolve,10000));
-      const data=await (await request({action:'status',operation:start.operation})).json();
-      if(data.done){complete=true;break} status.textContent='Creating your video… this can take a few minutes.';
-    }
-    if(!complete)throw Error('Video is taking longer than expected. Please try again later.');
-    status.textContent='Loading your video…';
-    const blob=await (await request({action:'download',operation:start.operation})).blob();
-    const video=document.createElement('video');video.controls=true;video.src=URL.createObjectURL(blob);status.replaceChildren(video);
-  }catch(err){status.textContent=err.message||'Video generation failed.'}
-  finally{btn.disabled=false}
-});
+function showDemoVideo(match){
+  const status=$('.ai-status');if(!status)return;
+  const src=match.a==='Gehlee'&&match.b==='Jeo Ong' ? '/gehlee-jeo.mp4'
+    : match.a==='Queen Leng'&&match.b==='Xander Ford' ? '/queen-leng-xander-ford.mp4' : null;
+  if(!src){status.textContent='Video coming soon.';return}
+  const placeholder=document.createElement('div');
+  placeholder.className='video-placeholder';placeholder.textContent='Loading video...';
+  const video=document.createElement('video');
+  video.controls=true;video.muted=true;video.autoplay=true;video.playsInline=true;video.hidden=true;
+  status.setAttribute('aria-busy','true');
+  video.addEventListener('loadeddata',()=>{placeholder.remove();video.hidden=false;status.setAttribute('aria-busy','false')},{once:true});
+  video.addEventListener('error',()=>{status.setAttribute('aria-busy','false');status.textContent='Video could not be loaded.'},{once:true});
+  status.replaceChildren(placeholder,video);video.src=src;
+}
+
+$('#out').addEventListener('close',()=>{$('#out video')?.pause()});
 
 $('#goDuo').onclick=()=>{
   const a=$('#n1').value.trim(),b=$('#n2').value.trim();
   if(!a||!b){$('#out').innerHTML='<div class="loading">'+U().errDuo+'</div>';return}
-  const m0=match(a,b);playMusic(m0);
-  theatrics(()=>{LASTM=m0;$('#out').innerHTML=cardHTML(LASTM)});
+  const m0=match(a,b);
+  LASTM=m0;const out=$('#out');out.innerHTML=cardHTML(LASTM);if(!out.open)out.showModal();showDemoVideo(LASTM);
 };
 
 document.addEventListener('click',e=>{
@@ -1004,19 +985,13 @@ function applyLang(){
   $('#n1').placeholder=u.n1;$('#n2').placeholder=u.n2;$('#goDuo').textContent=u.goDuo;
   $('#foot').textContent=u.foot;
   document.querySelectorAll('.lang button[data-l]').forEach(b=>b.classList.toggle('on',b.dataset.l===LANG));
-  $('#musicBtn').textContent=MUSIC_ON?u.musicOn:u.musicOff;
   document.documentElement.lang=LANG==='en'?'en':'tl';
 }
 document.querySelectorAll('.lang button[data-l]').forEach(b=>b.onclick=()=>{
   LANG=b.dataset.l;applyLang();
-  if(LASTM&&$('#trailerBox')){LASTM=match(LASTM.a,LASTM.b);$('#out').innerHTML=cardHTML(LASTM);animateBars()}
+  if(LASTM&&$('.ai-status')){LASTM=match(LASTM.a,LASTM.b);$('#out').innerHTML=cardHTML(LASTM);animateBars();showDemoVideo(LASTM)}
   else $('#out').innerHTML='';
 });
-$('#musicBtn').onclick=()=>{
-  MUSIC_ON=!MUSIC_ON;
-  if(MUSIC_ON){if(LASTM)playMusic(LASTM)}else stopMusic();
-  applyLang();
-};
 applyLang();
 </script>
 </body>
