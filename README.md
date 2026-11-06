@@ -1,6 +1,8 @@
 # Cue-pid
 
-A character-matching game. Edit the two name lists, spin the wheel, and reveal a match with a story and an optional AI-generated video.
+Cue-pid is a character-matching game. Edit the two name lists, spin the wheel, and see a fictional match. You can also enter two names directly.
+
+Each match includes a ship name, a compatibility score, a three-part story, and other playful details. Copy a summary, save the illustrated portrait, or make a 24-second trailer in a browser that supports recording. Taglish, English, and a music toggle are available. Results are for entertainment, not a real measure of compatibility.
 
 ## Run locally
 
@@ -9,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. You can also enter two names directly.
+Open http://localhost:3000.
 
 ## Google Veo video
 
