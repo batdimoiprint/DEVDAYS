@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cue-pid</title>
+<style>
+  :root{--pink:#ff4d8d;--deep:#2b0a3d;--gold:#ffd166;--card:#fff7fb;--ink:#2b0a3d}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#fff;
+    background:radial-gradient(circle at 20% 0%,#7b2cbf 0,#2b0a3d 55%,#12031c 100%);min-height:100vh;padding:20px 16px 60px}
+  .wrap{max-width:560px;margin:0 auto}
+  h1{font-size:2.6rem;margin:6px 0 0;letter-spacing:-1px;text-align:center}
+  h1 span{color:var(--pink)}
+  .tag{text-align:center;opacity:.85;margin:4px 0 18px;font-size:.95rem}
+  .tabs{display:flex;gap:8px;margin-bottom:12px}
+  .tab{flex:1;padding:10px;border:2px solid #ffffff33;background:transparent;color:#fff;border-radius:12px;font-weight:700;cursor:pointer}
+  .tab.on{background:var(--pink);border-color:var(--pink)}
+  .panel{background:#ffffff14;border:1px solid #ffffff22;border-radius:16px;padding:16px}
+  input,textarea{width:100%;padding:12px;border-radius:10px;border:none;font-size:1rem;margin-bottom:10px;font-family:inherit}
+  textarea{min-height:110px;resize:vertical}
+  .plus{text-align:center;font-size:1.4rem;margin:-4px 0 6px}
+  button.go{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(90deg,var(--pink),#ff8a5c);
+    color:#fff;font-size:1.05rem;font-weight:800;cursor:pointer}
+  button.go:active{transform:scale(.98)}
+  .loading{text-align:center;padding:30px 10px;font-weight:700}
+  .heart{display:inline-block;animation:beat .7s infinite;font-size:2rem}
+  @keyframes beat{50%{transform:scale(1.35)}}
+  .card{background:var(--card);color:var(--ink);border-radius:18px;padding:18px;margin-top:16px;
+    box-shadow:0 10px 30px #0006;animation:pop .35s ease}
+  @keyframes pop{from{transform:scale(.92);opacity:0}}
+  .pair{font-size:.9rem;opacity:.7;text-align:center}
+  .ship{font-size:2.1rem;font-weight:900;text-align:center;color:var(--pink);margin:2px 0}
+  .tier{text-align:center;font-weight:800;margin-bottom:10px}
+  .bar{height:16px;background:#e8d5e8;border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff4d8d,#ffd166);transition:width 1.2s ease}
+  .score{text-align:center;font-weight:900;font-size:1.4rem;margin:6px 0 10px}
+  .row{margin:10px 0;font-size:.95rem;line-height:1.4}
+  .row b{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:#8a3a8a}
+  .quote{border-left:4px solid var(--pink);padding-left:10px;font-style:italic}
+  .tiny{font-size:.72rem;opacity:.6;margin-top:10px;text-align:center}
+  .copy{margin-top:10px;width:100%;padding:9px;border-radius:10px;border:2px dashed var(--pink);background:transparent;color:var(--pink);font-weight:700;cursor:pointer}
+  .mini{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .mini .ship{font-size:1.2rem;text-align:left}
+  .mini .s{font-weight:900;font-size:1.3rem}
+  .lang{display:flex;justify-content:center;gap:6px;margin-bottom:4px}
+  .lang button{padding:5px 12px;border-radius:99px;border:1px solid #ffffff44;background:transparent;color:#fff;font-weight:700;cursor:pointer;font-size:.8rem}
+  .lang button#musicBtn{margin-left:8px;border-style:dashed}
+  .lang button.on{background:#fff;color:#2b0a3d}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="lang"><button data-l="tl" class="on">Taglish</button><button data-l="en">English</button><button id="musicBtn" type="button">Musika: On</button></div>
+  <h1>cue-<span>pid</span></h1>
+  <div class="tag" id="tag">Cue the music. Cue-pid has spoken. Walang bawian.</div>
+
+  <div class="tabs">
+    <button class="tab on" id="tabDuo" data-t="duo">Duo</button>
+    <button class="tab" id="tabRoom" data-t="room">Match the Room</button>
+  </div>
+
+  <div class="panel" id="duo">
+    <input id="n1" placeholder="Pangalan #1 (e.g. Mark)" autocomplete="off">
+    <div class="plus">+</div>
+    <input id="n2" placeholder="Pangalan #2 (e.g. Anna)" autocomplete="off">
+    <button class="go" id="goDuo">Cue the Music</button>
+  </div>
+
+  <div class="panel hide" id="room">
+    <textarea id="names" placeholder="Isang pangalan per line (or separated by commas). Minimum 2, pero mas marami mas chaos."></textarea>
+    <button class="go" id="goRoom">Pair Everyone, Walang Takas</button>
+  </div>
+
+  <div id="out"></div>
+  <div class="tiny" id="foot" style="margin-top:20px">For entertainment only. Cue-pid is not liable for heartbreaks, GC drama, or "friends na lang tayo" speeches.</div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();
+
+// deterministic randomness: same pair => same fate, always
+function hash(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19}return h>>>0}
+function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const pick=(a,r)=>a[Math.floor(r()*a.length)];
+
+const LOADING=[
+  "Kinakausap si Kuya Big Brother...",
+  "Chinecheck ang group chat ng mga tita...",
+  "Binabasa ang tarot ni Aling Nena...",
+  "Hinihintay ang commercial break...",
+  "Sinusuri ang eye contact sa canteen...",
+  "Nagda-download ng kilig (73% pa lang)...",
+  "Tinatanong ang crush ng bayan..."
+];
+
+const TIERS=[
+ {max:24,name:"FRIENDZONE FINAL BOSS",lines:[
+  "{a} and {b} have the chemistry of a wet tissue and a hair dryer. Magkaibigan lang daw. Pero uso naman 'yan, di ba?",
+  "Plot twist: parang magkapatid kayo. Pero hindi. Pero parang. Awkward.",
+  "{a} sends 'haha' and {b} reads it at 3 AM. Walang spark, puro seen."]},
+ {max:49,name:"KILIG PERO KUNWARI HINDI",lines:[
+  "Si {a} nagpapanggap na walang paki, si {b} nag-stalk na ng 2019 photos. Iba 'to.",
+  "Hindi pa sila, pero pareho na silang naka-online at naghihintay mag-type ng 'uy'.",
+  "{a} says 'friends lang'. {b} says 'oo nga'. Both lying. Both knows. Both gagi."]},
+ {max:74,name:"SLOW-BURN TELESERYE",lines:[
+  "Tatlong season pa bago umamin si {a}, at si {b} kunwari nagulat. Classic.",
+  "May ulan, may payong, may eksenang nagkahawak ang kamay. Kumpleto na ang requirements.",
+  "{a} and {b} will take 40 episodes to say 'mahal kita' and 41 to say it properly."]},
+ {max:89,name:"PRIME TIME LOVE TEAM",lines:[
+  "Billboard-ready! Ang fans ni {a} at {b} naka-all caps na sa comment section.",
+  "Sold out ang fan meeting bago pa magsimula. Hindi pa nga kayo, may merch na.",
+  "{a} and {b}: nagkatinginan lang, 5 million views na agad."]},
+ {max:100,name:"WALANG KUPAS, 20 YEARS PA!",lines:[
+  "Destined ito. Pati si Mother Lily napapa-sign of the cross. {a} and {b} for the history books.",
+  "Si Big Brother mismo nag-confess sa inyo. Wala na, tapos na ang laban.",
+  "Kahit pagbuhulin ang ugat ng puno, {a} and {b} pa rin. Teleserye finale, kasalan agad."]}
+];
+
+const CONFESSION=[
+ "Big Brother, hindi ko po alam kung bakit ako kinikilig... pero {b} lang po ang kailangan ko today.",
+ "Big Brother, may ka-chat po ako. Hindi ko po sasabihin kung sino. ({b}, ikaw 'yun.)",
+ "Big Brother, nagselos po ako nung may ibang kumain ng pagkain ni {b}. Hindi po ako okay.",
+ "Big Brother, pakiusap po, ilayo niyo na si {b}. Hindi ko na po kayang magpanggap na chill.",
+ "Big Brother, ang unang sinabi ko po kay {b} ay 'hi'. Ang sunod ay 'hello'. Hanggang dun na lang po ako.",
+ "Big Brother, bakit po parang lagi na lang may background music pag dumadaan si {b}?"
+];
+const TWIST=[
+ "Si {a} pala ang mawawalang kapatid ni {b}. Pero hindi, kidding. Pero kaya mo bang tiisin?",
+ "Mag-uunahan kayong umamin pero parehong mahuhuli dahil sabay nag-'seen' lang.",
+ "May third party na darating: ang WiFi. Maaabot ang signal sa kanto lang.",
+ "Magkaka-amnesia si {b}. Pero kahit amnesia, hahanapin pa rin si {a}.",
+ "Lilipat si {a} ng barangay. Susundan ni {b} ng tricycle. 4 episodes lang ang biyahe."
+];
+const GREEN=[
+ "nag-aabot ng tubig nang hindi hinihingi","lagi pa ring nagre-reply kahit 2AM","alam ang order mo sa milk tea",
+ "tumatawa sa corny jokes mo (kahit hindi nakakatawa)","nagpapahiram ng jacket kahit malamig din sila"
+];
+const RED=[
+ "nag-'k' lang bilang reply","may 14 unread na chat pero 'busy' daw","laging 'on the way' (hindi pa naligo)",
+ "'wala lang' ang sagot sa 'anong problema?'","ikaw ang mag-sagot ng GCash pero 'ililibre kita next time'"
+];
+const SIDE=[
+ "Pagngiti habang nagtitingin sa phone, biglang pag-'ehem', paulit-ulit na pag-check ng reflection",
+ "Pamumula ng pisngi sa group project, pagkawala ng gutom sa harap ng crush",
+ "Biglang pagkanta ng OPM sa shower, pag-rewind ng reel nang 12 beses",
+ "Pamumutla pag nag-'seen', 10% increase sa pag-aayos ng buhok bago mag-video call"
+];
+const FRIEND=[
+ "Si Bestie na laging 'ako na bahala' pero siya ang nagpapalala","Si Tita sa GC na unang nakaalam pero 'secret' daw",
+ "Si Kuya Guard na may bet kung sino ang unang aamin","Si Classmate na nag-sign na 'bagay kayo' sa lahat ng group photo"
+];
+
+function shipName(a,b){
+  const A=a.slice(0,Math.ceil(a.length/2)), B=b.slice(Math.floor(b.length/2));
+  const A2=b.slice(0,Math.ceil(b.length/2)), B2=a.slice(Math.floor(a.length/2));
+  return {main:cap(A+B),alt:cap(A2+B2)};
+}
+
+function match(n1,n2){
+  const a=cap(n1.trim()),b=cap(n2.trim());
+  const key=[a,b].map(x=>x.toLowerCase()).sort().join('|');
+  const r=rng(hash(key));
+  let score=Math.floor(r()*101);
+  let tier=D().TIERS.find(t=>score<=t.max);
+  let line=pick(tier.lines,r).replaceAll('{a}',a).replaceAll('{b}',b);
+  const sn=shipName(a,b);
+  if(a.toLowerCase()===b.toLowerCase()){
+    score=100;tier=D().TIERS[4];
+    line=U().selfLove(a);
+  }
+  return {
+    a,b,score,tier,line,
+    ship:sn.main,alt:sn.alt,
+    confession:pick(D().CONFESSION,r).replaceAll('{a}',a).replaceAll('{b}',b),
+    twist:pick(D().TWIST,r).replaceAll('{a}',a).replaceAll('{b}',b),
+    green:pick(D().GREEN,r),red:pick(D().RED,r),side:pick(D().SIDE,r),friend:pick(D().FRIEND,r),
+    tag:`#${a}${b}${U().tagSuf}`.replace(/\s/g,''),
+    key,
+    story:makeStory(a,b,D().TIERS.indexOf(tier),r),
+    pun:pick(D().PUNS,r).replaceAll('{a}',a).replaceAll('{b}',b)
+  };
+}
+
+const OPEN=[
+ "Una silang nagkita sa gitna ng malakas na ulan. Walang payong si {a}, at nag-offer ng sirang payong si {b}. Parehong basa, parehong kinikilig.",
+ "Sa isang siksikang jeep, napatabi si {a} kay {b}. 'Bayad po,' sabi ni {a}. 'Para po,' sagot ni {b}. Doon nagsimula ang unang dialogue ng tadhana.",
+ "Sa canteen, iisa na lang ang natitirang siomai. Sabay humawak sina {a} at {b}. Sabay tumingin. Sabay ding tumugtog ang background music galing sa kung saan.",
+ "Nagkamali ng group chat si {a} at na-send ang 'good morning' kay {b}. Nag-reply si {b}: 'Good morning din.' Doon na nagsimula ang lahat.",
+ "Sa library, sabay aabot sa iisang libro sina {a} at {b}. Wala namang gustong magbasa. Gusto lang magkadikit ang kamay."];
+const CLASH=[
+ "Pero dumating ang ex ni {a}, naka-slow motion pa ang buhok. Nag-walk out si {b} na may dramatic na sipon.",
+ "Nalaman ni {b} na si {a} pala ang nag-ghost sa kanya noong 2021. 'Hindi kita ni-ghost, na-low batt lang ako,' sabi ni {a}. Walang naniwala.",
+ "Nagpaligsahan sila sa group project at nagtalo kung sino ang 'leader.' Walang nanalo kundi ang professor na natuwa sa chika.",
+ "Biglang nawalan ng signal si {a} sa gitna ng confession. Pagbalik ng signal, ang narinig lang ni {b} ay 'mahal... lag... ka'.",
+ "Lumipat si {b} ng probinsya. Hinabol ni {a} ang bus. 'Hintay!' sigaw niya. Hindi huminto ang bus. Huminto lang ang puso."];
+const END=[
+ ["Natapos sa 'friends na lang tayo.' Pero ang epilogue: nagwa-wave pa rin sila sa isa't isa tuwing nagkakasalubong. Season 2, mahaba pa ang daan.",
+  "Walang romance, pero may lifetime supply ng asaran. Ang finale: group photo na silang dalawa ang magkatabi. Coincidence daw."],
+ ["Nag-confess si {a}, nag-'ha?' si {b}, tapos nagtawanan. Hindi pa sila, pero may inside joke na sila forever. Bitin pero cute.",
+  "Hindi sila naging official, pero tuwing may kasalan, magkatabi sila sa upuan at nagbubulungan. Cliffhanger."],
+ ["Sa ilalim ng ulan, sa wakas umamin din si {a}. Kunwari nagulat si {b}. Lahat ng tita sa GC nag-heart react. Nag-trending sa barangay.",
+  "Sa gitna ng EDSA traffic, sinabi ni {b} ang tatlong salita: 'Sabay tayo umuwi.' Iyak ang lahat ng pasahero. Iyak din ang aircon."],
+ ["Kasal sa plaza, may banda, may lechon, at umiyak si {a} bago pa magsabi ng 'I do.' Si {b} nag-ugat na sa kilig. Prime time finale.",
+  "Pagkatapos ng 120 episodes, sabay silang umamin. Nag-sing along ang buong bayan. Sold out ang merch bago pa mag-credits."],
+ ["Destined ito. Bumaba si Mother Lily mula sa langit para mag-bless. {a} at {b}, walang kupas hanggang pagtanda. Nag-extend ng 20 taon ang teleserye at walang nag-reklamo.",
+  "Ang finale: 50 taon na silang magkasama, nagtatalo pa rin kung sino ang unang nag-'hi.' Sagot ni Kuya Big Brother: 'Parehas.' Roll credits."]
+];
+const GENRES=[
+ {name:"Teleserye",open:OPEN,clash:CLASH,end:END},
+ {name:"Campus Romcom",
+  open:[
+   "Sa enrollment line, 6 oras na silang nakapila. Sa ika-7 oras, napagtanto ni {a} na si {b} ang pinakamagandang nangyari sa kanya ngayong semester. Pati si Ma'am, naka-pending ang grade.",
+   "Group project: si {a} ang leader, si {b} ang taga-'ako na bahala'. Walang gumawa ng slides, pero sabay silang nag-all-nighter sa Google Docs.",
+   "Na-stuck sila sa elevator na laging sira. 'Stuck tayo,' sabi ni {a}. 'Stuck na rin ako sa'yo,' sagot ni {b}. Si Kuya Guard, humagikgik.",
+   "Nag-print si {a} ng reporting niya, pero napunta ang papel kay {b}. Hanggang ngayon, 'sorry, wrong print' pa rin ang opening line nila."],
+  clash:[
+   "Biglang naging deadline ang lahat ng bagay, pati ang feelings. Walang nag-submit.",
+   "Nalaman ni {b} na may 'crush list' si {a} sa notebook. Nasa unang pahina si {b}. Nasa huling pahina rin si {b}. Nalito ang lahat.",
+   "Nag-drop si {a} ng subject. Hindi ng subject, ng feelings. Nag-late enroll ulit kinabukasan.",
+   "Pumasok ang professor na laging 'bukas na lang ang grades.' Bukas na lang din ang confession."],
+  end:[
+   ["Nag-graduate silang dalawa, bawat isa sa sarili niyang section. Pero sa yearbook, magkatabi ang pangalan nila. Alphabetical lang daw.",
+    "Naging magka-GC na lang sila. Seen ang pinakamalalim na usapan, pero kumpleto ang attendance."],
+   ["Parehong ruta ang jeep nila pauwi. Hindi pa sila, pero ang final answer ng puso ay 'TBA.'",
+    "Nag-share sila ng isang order na fries at isang order ng 'baka pwede.' Pending pa ang resulta, pero sabay silang naglalakad pauwi."],
+   ["Sa graduation, nag-propose si {b} gamit ang cap na may nakasulat na 'Will you be my thesis partner forever?' Cum laude sa kilig.",
+    "Pagtapos ng board exam, unang tinext ni {a} si {b}. Pasado silang pareho. Ang una nilang celebration: lugaw."]]},
+ {name:"Horror-Komedi",
+  open:[
+   "Sa lumang bahay, nagkasalubong sa hallway sina {a} at {b}. Pareho silang nagtago sa multo. Pareho pang nagsabi ng 'huwag kang sumigaw.' Sabay silang sumigaw.",
+   "Nag-night shift si {a}. Nag-night shift din si {b}. Ang tanging witness: isang multong nagbebenta ng fishball. Kinilig din ang multo.",
+   "Nasiraan ng sasakyan si {a} sa tapat ng lumang simbahan. Dumating si {b}, may dalang flashlight at mas malaking takot. Doon nagsimula ang lahat.",
+   "Sa sementeryo, nakita ni {a} si {b} na nag-aalay ng sinigang sa puntod. 'Para kanino 'yan?' 'Para sa lola kong mahilig mag-chika.' Hulog na hulog si {a}."],
+  clash:[
+   "Lumitaw ang multong ex ni {a}, nakaputi, nakangiti, at may dalang resibo ng 'utang na loob.' Nagtago si {b} sa likod ng ref.",
+   "Biglang namatay ang ilaw. Pagbukas, wala na si {b}. Hindi pala kinuha ng multo, sumama lang pala sa kapitbahay para umorder ng pansit.",
+   "Nag-'seen' lang ang multo sa lahat ng chat nila. Walang mas nakakatakot kaysa seen zone.",
+   "Nalaman nilang may 'no PDA' rule ang bahay mula pa noong 1923. Parehong napabuntong-hininga, parehong nagtapat."],
+  end:[
+   ["Hindi sila naging magkasama, pero ang multo ang naging pinakamalapit nilang friend. Nag-iwan ng sulat: 'Next life na lang.'",
+    "Umalis si {b} nang walang paalam. Ang naiwan lang: isang kutsara, isang electric fan, at ang multo ng 'sana.'"],
+   ["Nagtabi sila sa gilid ng kama, parehong gising, parehong nakatingin sa kisame. 'Nakikita mo rin ba 'yun?' 'Oo. Ang kinabukasan natin.'",
+    "Naging ghosthunter partners sila. Wala silang nahuling multo, pero may nahuling puso."],
+   ["Natapos ang gabi na may sunrise, may kape, at may multong sumasayaw ng cha-cha sa background. Official na sila, pumayag na rin ang bahay.",
+    "Bumalik ang multo para mag-bless. 'Kayo na,' sabi niya, sabay nawala. Kasalan sa susunod na Undas."]]},
+ {name:"Fiesta sa Probinsya",
+  open:[
+   "Sa kasagsagan ng fiesta, nahuli ni {a} ang bola sa palaro. Ang tumulong bumili ng bagong bola ay si {b}, may dalang banderitas at kilig.",
+   "Sa tapat ng sari-sari store, parehong humingi ng huling pandesal sina {a} at {b}. 'Sa'yo na.' 'Sa'yo na.' Walang natira. Si Aling Nena, naka-thumbs up.",
+   "Naligaw si {a} sa kabilang barangay. Tinuro siya ni {b}: 'Diretso lang, kaliwa sa puso ko.' Mas naligaw si {a}.",
+   "Si {a} ay nagtitinda ng ube, si {b} ay nagtitinda ng keso. Pinagsama, ube cheese. Bumenta ang buong barangay."],
+  clash:[
+   "Nag-away ang dalawang pamilya dahil sa nawawalang manok. Hindi pala nawawala, naka-ready lang sa kasal ng ibang manok. Yes, may kasal.",
+   "Umulan sa gitna ng Santacruzan. Nabasa ang lahat, pati ang pangako. Walang payong ang pag-ibig.",
+   "Narinig ng buong baryo na nag-videoke si {b} ng 'Hindi Kita Mahal.' Nanlamig ang bagoong.",
+   "Nag-aya si {a} mag-date sa palengke. Hindi pala date, bibili lang pala ng isda. Pero kinilig pa rin si {b}."],
+  end:[
+   ["Bumalik sila sa kani-kanilang baryo, pero tuwing fiesta, nagtatagpo ang tingin nila sa gitna ng banda. 'Next year na lang,' bulong ng hangin.",
+    "Ang tanging naiwan: isang banderitas na may nakasulat na 'sana.' Nakasabit pa rin sa kanto."],
+   ["Naglakad sila pauwi, bawat isa may sariling payong pero iisang daan. Hindi pa sila, pero parehong pauwi sa iisang pangarap.",
+    "Nagpalit sila ng tupperware. Ibig sabihin, may dahilan na silang magkita ulit. Pinaka-romantikong gesture sa baryo."],
+   ["Ikinasal sila sa gitna ng fiesta, at ang buong baryo ang ninong at ninang. May lechon, may banda, may videoke na 'My Way' na umiyak lahat.",
+    "Pagkatapos ng pamamanhikan, umiyak ang tatay ni {a} at nagluto ng sampung ulam ang nanay ni {b}. Nagsimula ang forever sa kanin."]]},
+ {name:"Tech Bro Love Story",
+  open:[
+   "Nag-match sa dating app sina {a} at {b}. Pareho nilang binuksan ang chat, pareho nilang sinabing 'hi.' Nag-timeout ang server.",
+   "Sa coworking space, parehong nag-bug ang laptop. Nag-debug si {a} ng code, nag-debug si {b} ng feelings. Parehong nag-fail ang compile.",
+   "Naghahanap ng WiFi si {a}. Nakita si {b}, may hotspot. 'Password?' 'Ikaw.' Nag-connect ang dalawa.",
+   "Sa hackathon, naging teammates sina {a} at {b} dahil nagkamali sa pag-click ng team. Nanalo sila ng 'Best Chemistry,' kahit kakakilala lang."],
+  clash:[
+   "Na-deploy ni {a} ang update nang walang test. Nag-crash ang buong relasyon. Walang rollback, tanging 'sorry' commit.",
+   "Nag-leak ang feelings ni {a} sa public repo. Nakita ito ni {b} sa README. Nag-star pa.",
+   "Nag-merge conflict ang schedule nila. Pro-weekend si {a}, pro-weekday si {b}. Parehong nag-'git blame' sa isa't isa.",
+   "Nag-expire ang free trial ng attention ni {b}. Inalok ni {a} ng discount: 'Libre ang kilig, one month.'"],
+  end:[
+   ["Na-archive ang repo, pero hindi nabura. Paminsan-minsan, may nag-'git log' pa rin. 'Hindi kita nakalimutan,' sabi ng commit history.",
+    "404: Pag-ibig not found. Pero ang cache ay may natirang ngiti."],
+   ["Nag-pair program sila nang walang code. Parehong nakatitig sa iisang screen at iisang tanong: 'Tayo na ba?' 'Pending pa ang review.'",
+    "Nag-push si {a} ng 'maybe' commit. Nag-approve si {b}. Hinihintay na lang ang merge."],
+   ["Nag-deploy sila sa production: isang love story na walang bugs, walang downtime. Uptime: 99.99% kilig.",
+    "Ang final commit message: 'feat: {a} and {b}, forever.' Walang revert. Walang rollback. Only love."]]}
+];
+const PUNS=[
+ "{a}, kape ka ba? Kasi ayokong matulog nang hindi ka naiisip.",
+ "{b}, Google ka ba? Kasi nasa'yo na ang lahat ng hinahanap ko.",
+ "{a}, bangko ka ba? Kasi interested ako sa'yo.",
+ "{b}, kanin ka ba? Kasi kulang ang ulam kung wala ka.",
+ "{a}, charger ka ba? Kasi tuwing nakikita kita, nabubuhay ako ulit.",
+ "{b}, library ka ba? Kasi sa'yo ako tahimik pero gusto kong manatili.",
+ "Hindi ako magaling sa Math, pero kapag {a} at {b}, parang 1+1=forever.",
+ "{a}, passport ka ba? Gusto kong dalhin ka kahit saan.",
+ "{b}, WiFi ka ba? Kasi nararamdaman ko ang connection.",
+ "{a}, pandesal ka ba? Kasi ikaw ang una kong hinahanap tuwing umaga."
+];
+function makeStory(a,b,ti,r){
+  const f=s=>s.replaceAll('{a}',a).replaceAll('{b}',b);
+  const g=pick(D().GENRES,r);
+  const endPool=g.end.length===5?g.end[ti]:g.end[ti<=1?0:ti===2?1:2];
+  return {genre:g.name,parts:[f(pick(g.open,r)),f(pick(g.clash,r)),f(pick(endPool,r))]};
+}
+
+let LANG='tl';
+try{if(/[?&]lang=en/.test(location.search))LANG='en'}catch(e){}
+
+const TL={LOADING,TIERS,CONFESSION,TWIST,GREEN,RED,SIDE,FRIEND,GENRES,PUNS};
+const EN={
+ LOADING:[
+  "Consulting Big Brother...",
+  "Checking the aunties' group chat...",
+  "Reading Aling Nena's tarot cards...",
+  "Waiting for the commercial break...",
+  "Analyzing eye contact in the canteen...",
+  "Downloading butterflies (73% done)...",
+  "Asking the town's biggest crush..."
+ ],
+ TIERS:[
+  {max:24,name:"FRIENDZONE FINAL BOSS",lines:[
+   "{a} and {b} have the chemistry of a wet tissue and a hair dryer. Just friends, they say. But hey, that's a trend, right?",
+   "Plot twist: you two feel like siblings. But you're not. But kind of. Awkward.",
+   "{a} sends 'haha' and {b} reads it at 3 AM. No spark, just seen."]},
+  {max:49,name:"BUTTERFLIES BUT PRETENDING NOT TO",lines:[
+   "{a} pretends not to care, {b} has already stalked their 2019 photos. This is different.",
+   "They're not together yet, but both are online and waiting to type 'hey.'",
+   "{a} says 'just friends'. {b} says 'yeah, totally'. Both lying. Both know. Both clueless."]},
+  {max:74,name:"SLOW-BURN SOAP OPERA",lines:[
+   "Three more seasons before {a} confesses, and {b} will pretend to be surprised. Classic.",
+   "There's rain, an umbrella, and a hand-holding scene. All requirements met.",
+   "{a} and {b} will take 40 episodes to say 'I love you' and 41 to say it properly."]},
+  {max:89,name:"PRIME TIME LOVE TEAM",lines:[
+   "Billboard-ready! The fans of {a} and {b} are already in all caps in the comments.",
+   "The fan meeting sold out before it started. You're not even together, and there's merch.",
+   "{a} and {b}: one glance, 5 million views."]},
+  {max:100,name:"TIMELESS, 20 YEARS STRONG!",lines:[
+   "This is destiny. Even the film mogul is making the sign of the cross. {a} and {b} for the history books.",
+   "Big Brother himself confessed for you two. It's over, the game is won.",
+   "Even if the roots of a tree were tangled, it would still be {a} and {b}. Soap opera finale, wedding right away."]}
+ ],
+ CONFESSION:[
+  "Big Brother, I don't know why I'm blushing... but {b} is all I need today.",
+  "Big Brother, I have a chat buddy. I won't say who. ({b}, it's you.)",
+  "Big Brother, I got jealous when someone ate {b}'s food. I'm not okay.",
+  "Big Brother, please, take {b} away. I can't pretend to be chill anymore.",
+  "Big Brother, the first thing I told {b} was 'hi'. The next was 'hello'. That's as far as I got.",
+  "Big Brother, why is there always background music when {b} walks by?"
+ ],
+ TWIST:[
+  "{a} turns out to be {b}'s long-lost sibling. Just kidding. But could you live with that?",
+  "You'll race to confess, but both be late because you both just 'seen' each other.",
+  "A third party arrives: the WiFi. The signal only reaches the corner.",
+  "{b} gets amnesia. But even with amnesia, {b} still looks for {a}.",
+  "{a} moves to another town. {b} follows by tricycle. The trip only takes 4 episodes."
+ ],
+ GREEN:[
+  "hands you water without being asked","still replies at 2AM","knows your milk tea order",
+  "laughs at your corny jokes (even when they're not funny)","lends you a jacket even when they're cold too"
+ ],
+ RED:[
+  "replies with just 'k'","has 14 unread chats but is 'busy'","is always 'on the way' (hasn't showered yet)",
+  "answers 'nothing' to 'what's wrong?'","makes you pay the GCash but says 'my treat next time'"
+ ],
+ SIDE:[
+  "Smiling at the phone, a sudden 'ahem', repeatedly checking their reflection",
+  "Blushing in group projects, losing appetite around the crush",
+  "Sudden OPM singing in the shower, rewatching the reel 12 times",
+  "Going pale at every 'seen', a 10% increase in hair fixing before video calls"
+ ],
+ FRIEND:[
+  "The bestie who always says 'I got this' but makes it worse","The aunt in the group chat who knew first but says it's 'a secret'",
+  "The security guard who has a bet on who confesses first","The classmate who says 'you look good together' in every group photo"
+ ],
+ GENRES:[
+  {name:"Soap Opera",
+   open:[
+    "They first met in the middle of a heavy rain. {a} had no umbrella, and {b} offered a broken one. Both soaked, both blushing.",
+    "On a packed jeepney, {a} ended up next to {b}. 'Payment, please,' said {a}. 'Stop here, please,' replied {b}. The first line of dialogue written by fate.",
+    "In the canteen, only one siomai was left. {a} and {b} reached for it together. They looked up together. Background music played from somewhere, also together.",
+    "{a} sent a 'good morning' to the wrong group chat and it landed on {b}. {b} replied: 'Good morning to you too.' That's where it all began.",
+    "In the library, {a} and {b} reached for the same book. Neither wanted to read. They just wanted their hands to touch."],
+   clash:[
+    "But then {a}'s ex arrived, hair in slow motion. {b} walked out with a dramatic sniffle.",
+    "{b} found out that {a} was the one who ghosted them in 2021. 'I didn't ghost you, my phone just died,' said {a}. Nobody believed it.",
+    "They competed in the group project and argued over who was the 'leader.' The only winner was the professor, who enjoyed the gossip.",
+    "{a} lost signal in the middle of the confession. When it came back, all {b} heard was 'I... lag... you'.",
+    "{b} moved to the province. {a} chased the bus. 'Wait!' they shouted. The bus didn't stop. Only a heart did."],
+   end:[
+    ["It ended with 'let's just be friends.' But the epilogue: they still wave at each other whenever they pass by. Season 2 has a long way to go.",
+     "No romance, but a lifetime supply of teasing. The finale: a group photo with the two of them side by side. A coincidence, they say."],
+    ["{a} confessed, {b} said 'huh?', then they laughed. They're not together, but they have an inside joke forever. A cliffhanger but cute.",
+     "They never became official, but at every wedding, they sit together and whisper. Cliffhanger."],
+    ["Under the rain, {a} finally confessed. {b} pretended to be surprised. Every aunt in the group chat heart-reacted. Trending in the barangay.",
+     "In the middle of EDSA traffic, {b} said the three words: 'Let's go home together.' Every passenger cried. So did the aircon."],
+    ["A wedding in the plaza, with a band, a lechon, and {a} cried before even saying 'I do.' {b} melted from the butterflies. Prime time finale.",
+     "After 120 episodes, they confessed at the same time. The whole town sang along. The merch sold out before the credits."],
+    ["This is destiny. The film mogul came down from heaven to bless it. {a} and {b}, timeless until old age. The soap opera was extended by 20 years and nobody complained.",
+     "The finale: 50 years together, still arguing about who said 'hi' first. Big Brother's answer: 'Both.' Roll credits."]
+   ]},
+  {name:"Campus Romcom",
+   open:[
+    "At the enrollment line, they'd waited 6 hours. In the 7th hour, {a} realized {b} was the best thing that happened to them this semester. Even Ma'am's grade was left pending.",
+    "Group project: {a} was the leader, {b} was the 'I got this' guy. Nobody made the slides, but they pulled an all-nighter on Google Docs together.",
+    "They got stuck in the always-broken elevator. 'We're stuck,' said {a}. 'I'm already stuck on you,' replied {b}. The security guard giggled.",
+    "{a} printed their report, but the paper ended up with {b}. To this day, 'sorry, wrong print' is still their opening line."],
+   clash:[
+    "Suddenly everything became a deadline, even feelings. Nobody submitted.",
+    "{b} found out {a} had a 'crush list' in a notebook. {b} was on the first page. {b} was also on the last page. Everyone was confused.",
+    "{a} dropped a subject. Not a subject, feelings. Re-enrolled the next day.",
+    "In walked the professor who always said 'grades tomorrow.' The confession was also 'tomorrow.'"],
+   end:[
+    ["They both graduated, each in their own section. But in the yearbook, their names are side by side. Alphabetical, they say.",
+     "They became group-chat friends only. 'Seen' was the deepest conversation, but attendance was perfect."],
+    ["Their jeep routes home are the same. They're not together yet, but the heart's final answer is 'TBA.'",
+     "They shared one order of fries and one order of 'maybe.' The result is pending, but they walked home together."],
+    ["At graduation, {b} proposed using a cap that read 'Will you be my thesis partner forever?' Cum laude in butterflies.",
+     "After the board exam, {a} texted {b} first. They both passed. Their first celebration: lugaw."]]},
+  {name:"Horror-Comedy",
+   open:[
+    "In the old house, {a} and {b} bumped into each other in the hallway. They were both hiding from the ghost. They both said 'don't scream.' They screamed together.",
+    "{a} worked the night shift. {b} worked the night shift too. The only witness: a ghost selling fishballs. The ghost blushed too.",
+    "{a}'s car broke down in front of the old church. {b} arrived with a flashlight and an even bigger fear. That's where it all began.",
+    "At the cemetery, {a} saw {b} offering sinigang at a grave. 'Who's that for?' 'For my grandma who loved to gossip.' {a} fell hard."],
+   clash:[
+    "{a}'s ghost ex appeared, in white, smiling, holding a receipt for a 'debt of gratitude.' {b} hid behind the fridge.",
+    "The lights suddenly went out. When they came back, {b} was gone. Not taken by a ghost, just went with the neighbor to order pancit.",
+    "The ghost just left everything they sent on 'seen.' Nothing is scarier than the seen zone.",
+    "They found out the house has had a 'no PDA' rule since 1923. They both sighed, and both confessed."],
+   end:[
+    ["They didn't end up together, but the ghost became their closest friend. Left a note: 'Next life.'",
+     "{b} left without saying goodbye. All that remained: a spoon, an electric fan, and the ghost of 'what if.'"],
+    ["They lay side by side, both awake, both staring at the ceiling. 'Do you see that too?' 'Yes. Our future.'",
+     "They became ghost-hunting partners. They never caught a ghost, but they caught a heart."],
+    ["The night ended with sunrise, coffee, and a ghost dancing the cha-cha in the background. They're official, and the house approved too.",
+     "The ghost came back to give a blessing. 'You're together now,' it said, then vanished. Wedding next All Saints' Day."]]},
+  {name:"Fiesta in the Province",
+   open:[
+    "In the middle of the fiesta, {a} caught the ball in the games. The one who helped buy a new ball was {b}, carrying bunting and butterflies.",
+    "In front of the sari-sari store, {a} and {b} both asked for the last pandesal. 'You take it.' 'No, you.' Nothing was left. Aling Nena gave a thumbs-up.",
+    "{a} got lost in the next barangay. {b} gave directions: 'Go straight, turn left at my heart.' {a} got even more lost.",
+    "{a} sold ube, {b} sold cheese. Combined: ube cheese. The whole barangay sold out."],
+   clash:[
+    "The two families fought over a missing chicken. Turns out it wasn't missing, it was just getting ready for another chicken's wedding. Yes, there's a wedding.",
+    "It rained in the middle of the Santacruzan. Everything got wet, even the promise. Love has no umbrella.",
+    "The whole village heard {b} sing 'I Don't Love You' on karaoke. The bagoong went cold.",
+    "{a} invited {b} on a date at the market. It wasn't a date, they were just buying fish. But {b} still blushed."],
+   end:[
+    ["They went back to their own villages, but every fiesta, their eyes meet in the middle of the band. 'Next year,' whispers the wind.",
+     "All that's left: a bunting with 'maybe' written on it. Still hanging at the corner."],
+    ["They walked home, each with their own umbrella but the same road. They're not together yet, but headed home to the same dream.",
+     "They swapped tupperware. That means they have a reason to meet again. The most romantic gesture in the village."],
+    ["They got married in the middle of the fiesta, and the whole village were the godparents. There was lechon, a band, and a karaoke 'My Way' that made everyone cry.",
+     "After the family meeting, {a}'s dad cried and {b}'s mom cooked ten dishes. Forever started with rice."]]},
+  {name:"Tech Bro Love Story",
+   open:[
+    "{a} and {b} matched on a dating app. They both opened the chat, both said 'hi.' The server timed out.",
+    "At the coworking space, both laptops bugged out. {a} debugged code, {b} debugged feelings. Both compiles failed.",
+    "{a} was looking for WiFi. Saw {b}, who had a hotspot. 'Password?' 'You.' The two connected.",
+    "At the hackathon, {a} and {b} became teammates by mistakenly clicking the wrong team. They won 'Best Chemistry,' even though they had just met."],
+   clash:[
+    "{a} deployed the update without testing. The whole relationship crashed. No rollback, only a 'sorry' commit.",
+    "{a}'s feelings leaked in a public repo. {b} saw it in the README. And starred it.",
+    "Their schedules had a merge conflict. {a} is pro-weekend, {b} is pro-weekday. Both ran 'git blame' on each other.",
+    "{b}'s free trial of attention expired. {a} offered a discount: 'Free butterflies, one month.'"],
+   end:[
+    ["The repo got archived, but not deleted. Once in a while, someone still runs 'git log.' 'I never forgot you,' says the commit history.",
+     "404: Love not found. But the cache kept a smile."],
+    ["They pair-programmed without any code. Both staring at the same screen and the same question: 'Are we together?' 'Review pending.'",
+     "{a} pushed a 'maybe' commit. {b} approved. Just waiting for the merge."],
+    ["They deployed to production: a love story with no bugs, no downtime. Uptime: 99.99% butterflies.",
+     "The final commit message: 'feat: {a} and {b}, forever.' No reverts. No rollbacks. Only love."]]}
+ ],
+ PUNS:[
+  "{a}, are you coffee? Because I can't sleep without thinking of you.",
+  "{b}, are you Google? Because you have everything I'm looking for.",
+  "{a}, are you a bank? Because I'm interested in you.",
+  "{b}, are you rice? Because a meal is incomplete without you.",
+  "{a}, are you a charger? Because every time I see you, I come back to life.",
+  "{b}, are you a library? Because I'm quiet around you but I want to stay.",
+  "I'm not good at math, but when it's {a} and {b}, it's like 1+1=forever.",
+  "{a}, are you a passport? Because I want to take you everywhere.",
+  "{b}, are you WiFi? Because I'm feeling a connection.",
+  "{a}, are you pandesal? Because you're the first thing I look for every morning."
+ ]
+};
+const D=()=>LANG==='en'?EN:TL;
+
+const UI={
+ tl:{
+  tag:"Cue the music. Cue-pid has spoken. Walang bawian.",tabDuo:"Duo",tabRoom:"Match the Room",
+  n1:"Pangalan #1 (e.g. Mark)",n2:"Pangalan #2 (e.g. Anna)",
+  namesPh:"Isang pangalan per line (or separated by commas). Minimum 2, pero mas marami mas chaos.",
+  goDuo:"Cue the Music",goRoom:"Pair Everyone, Walang Takas",
+  foot:"For entertainment only. Cue-pid is not liable for heartbreaks, GC drama, or 'friends na lang tayo' speeches.",
+  errDuo:"Dalawang pangalan po, hindi po marunong mag-match si Cue-pid ng hangin.",
+  errRoom:"Kulang! Kailangan ng at least 2. Hindi pwedeng mag-date mag-isa (maliban kung self-love arc).",
+  selfLove:a=>`${a} + ${a}? Self-love arc! Narcissus nod, pero respeto. Mag-date kayo sa salamin.`,
+  tagSuf:"ForeverChar",thirdTitle:"THIRD WHEEL HALL OF FAME",
+  thirdBody:x=>`Walang partner today, pero si ${x} ang MVP: taga-hawak ng bag, taga-picture, taga-'uy bagay kayo'. Next season, kayo naman.`,
+  alt:"alt name:",scoreSuf:"kilig",
+  art:"Opisyal na larawan ng love team (gawa ng Cue-pid Art Dept: isang intern at isang crayon)",save:"I-save ang larawan (PNG)",
+  story:(s,g)=>`Ang Kwento ng ${s} (${g})`,ep1:"Ep. 1: Ang Pagkikita",ep2:"Ep. 2: Ang Gulo",ep3:"Finale: Ang Wakas",
+  pun:"Banat ni Cue-pid",trailerRow:"Opisyal na Trailer (video, 24 segundo)",trailerBtn:"Gumawa ng Trailer",
+  confession:"Confession Room",twist:"Next Episode Plot Twist",green:"Green flag",red:"Red flag",
+  side:"Kilig side effects",friend:"Mutual friend na magpapalala",hashtag:"Official hashtag",
+  musicOn:"Musika: On",musicOff:"Musika: Off",
+  copy:"Copy para sa GC",copied:"Na-copy! Ipadala mo na sa GC",copiedShort:"Na-copy!",
+  rendering:"Nire-render ang trailer...",download:e=>"I-download ang trailer (."+e+")",replay:"Ulitin ang Trailer",
+  aGenre:g=>"Isang "+g,scoreCap:"KILIG SCORE",
+  copyText:m=>`cue-pid says: ${m.a} + ${m.b} = ${m.ship}\nKilig score: ${m.score}/100 (${m.tier.name})\n"${m.confession}"\n${m.tag}`
+ },
+ en:{
+  tag:"Cue the music. Cue-pid has spoken. No take-backs.",tabDuo:"Duo",tabRoom:"Match the Room",
+  n1:"Name #1 (e.g. Mark)",n2:"Name #2 (e.g. Anna)",
+  namesPh:"One name per line (or comma-separated). Minimum 2, but more names means more chaos.",
+  goDuo:"Cue the Music",goRoom:"Pair Everyone, No Escape",
+  foot:"For entertainment only. Cue-pid is not liable for heartbreaks, group chat drama, or 'let's just be friends' speeches.",
+  errDuo:"Two names please. Cue-pid can't match thin air.",
+  errRoom:"Not enough! You need at least 2. No dating yourself (unless it's a self-love arc).",
+  selfLove:a=>`${a} + ${a}? Self-love arc! A nod to Narcissus, but respect. Go on a date in the mirror.`,
+  tagSuf:"Forever",thirdTitle:"THIRD WHEEL HALL OF FAME",
+  thirdBody:x=>`No partner today, but ${x} is the MVP: bag holder, photographer, and professional 'you two look so good together' guy. Next season, it's your turn.`,
+  alt:"alt name:",scoreSuf:"butterflies",
+  art:"Official love team portrait (by the Cue-pid Art Dept: one intern and one crayon)",save:"Save picture (PNG)",
+  story:(s,g)=>`The Story of ${s} (${g})`,ep1:"Ep. 1: The Meet-Cute",ep2:"Ep. 2: The Mess",ep3:"Finale: The Ending",
+  pun:"Cue-pid's Pickup Line",trailerRow:"Official Trailer (video, 24 seconds)",trailerBtn:"Make Trailer",
+  confession:"Confession Room",twist:"Next Episode Plot Twist",green:"Green flag",red:"Red flag",
+  side:"Butterfly side effects",friend:"Mutual friend who will make it worse",hashtag:"Official hashtag",
+  musicOn:"Music: On",musicOff:"Music: Off",
+  copy:"Copy for the group chat",copied:"Copied! Send it to the group chat",copiedShort:"Copied!",
+  rendering:"Rendering trailer...",download:e=>"Download trailer (."+e+")",replay:"Replay Trailer",
+  aGenre:g=>"A "+g,scoreCap:"BUTTERFLIES SCORE",
+  copyText:m=>`cue-pid says: ${m.a} + ${m.b} = ${m.ship}\nButterflies score: ${m.score}/100 (${m.tier.name})\n"${m.confession}"\n${m.tag}`
+ }
+};
+const U=()=>UI[LANG];
+
+function cardHTML(m){
+  const u=U();
+  const text=u.copyText(m);
+  return `<div class="card">
+    <div class="pair">${esc(m.a)} + ${esc(m.b)}</div>
+    <div class="ship">${esc(m.ship)}</div>
+    <div class="pair">${u.alt} ${esc(m.alt)}</div>
+    <div class="tier" style="margin-top:8px">${m.tier.name}</div>
+    <div class="bar"><i data-w="${m.score}"></i></div>
+    <div class="score">${m.score}/100 ${u.scoreSuf}</div>
+    <div class="row">${esc(m.line)}</div>
+    <div class="row"><b>${u.art}</b>${sceneSVG(m)}
+      <button class="copy save" style="margin-top:8px">${u.save}</button></div>
+    <div class="row"><b>${esc(u.story(m.ship,m.story.genre))}</b>
+      <p style="margin:6px 0"><strong>${u.ep1}.</strong> ${esc(m.story.parts[0])}</p>
+      <p style="margin:6px 0"><strong>${u.ep2}.</strong> ${esc(m.story.parts[1])}</p>
+      <p style="margin:6px 0"><strong>${u.ep3}.</strong> ${esc(m.story.parts[2])}</p></div>
+    <div class="row"><b>${u.pun}</b>${esc(m.pun)}</div>
+    <div class="row"><b>${u.trailerRow}</b><button class="go trailer" style="margin-top:6px">${u.trailerBtn}</button><div id="trailerBox"></div></div>
+    <div class="row"><b>${u.confession}</b><span class="quote">"${esc(m.confession)}"</span></div>
+    <div class="row"><b>${u.twist}</b>${esc(m.twist)}</div>
+    <div class="row"><b>${u.green}</b>${esc(m.a)} ${esc(m.green)}</div>
+    <div class="row"><b>${u.red}</b>${esc(m.b)} ${esc(m.red)}</div>
+    <div class="row"><b>${u.side}</b>${esc(m.side)}</div>
+    <div class="row"><b>${u.friend}</b>${esc(m.friend)}</div>
+    <div class="row"><b>${u.hashtag}</b>${esc(m.tag)}</div>
+    <button class="copy" data-copy="${encodeURIComponent(text)}">${u.copy}</button>
+  </div>`;
+}
+
+
+let AC=null,MASTER=null,MDEST=null,MUSIC_ON=true,CUR_BUS=null,NBUF=null;
+function audioCtx(){
+  if(!AC){
+    const AX=window.AudioContext||window.webkitAudioContext;if(!AX)return null;
+    AC=new AX();
+    const comp=AC.createDynamicsCompressor();
+    MASTER=AC.createGain();MASTER.gain.value=.9;
+    MASTER.connect(comp);comp.connect(AC.destination);
+    try{MDEST=AC.createMediaStreamDestination();comp.connect(MDEST)}catch(e){MDEST=null}
+    NBUF=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);
+    const d=NBUF.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  }
+  if(AC.state==='suspended')AC.resume();
+  return AC;
+}
+function stopMusic(){
+  if(CUR_BUS&&AC){try{CUR_BUS.gain.cancelScheduledValues(AC.currentTime);CUR_BUS.gain.setTargetAtTime(0,AC.currentTime,.05)}catch(e){}}
+  CUR_BUS=null;
+}
+const mtof=n=>440*Math.pow(2,(n-69)/12);
+function tone(bus,type,freq,t,dur,vol,o){
+  o=o||{};dur=Math.max(.05,dur);
+  const osc=AC.createOscillator(),g=AC.createGain();
+  osc.type=type;osc.frequency.setValueAtTime(freq,t);
+  if(o.slideTo)osc.frequency.exponentialRampToValueAtTime(o.slideTo,t+dur);
+  let node=osc;
+  if(o.lp){const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=o.lp;osc.connect(f);node=f}
+  if(o.vib){const l=AC.createOscillator(),lg=AC.createGain();l.frequency.value=o.vib;lg.gain.value=freq*.02;l.connect(lg);lg.connect(osc.frequency);l.start(t);l.stop(t+dur+.1)}
+  const a=Math.min(o.a==null?.01:o.a,dur*.5);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+a);
+  if(o.pluck){g.gain.exponentialRampToValueAtTime(.0001,t+dur)}
+  else{const rel=Math.min(o.r==null?.08:o.r,dur-a);g.gain.setValueAtTime(vol,t+dur-rel);g.gain.exponentialRampToValueAtTime(.0001,t+dur)}
+  node.connect(g);g.connect(bus);osc.start(t);osc.stop(t+dur+.05);
+}
+function noise(bus,t,dur,vol,type,freq,sweepTo){
+  const s=AC.createBufferSource();s.buffer=NBUF;s.loop=true;
+  const f=AC.createBiquadFilter();f.type=type;f.frequency.setValueAtTime(freq,t);
+  if(sweepTo)f.frequency.exponentialRampToValueAtTime(sweepTo,t+dur);
+  const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+Math.min(.01,dur/2));g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  s.connect(f);f.connect(g);g.connect(bus);s.start(t);s.stop(t+dur+.05);
+}
+function riser(bus,t,dur,vol){
+  const s=AC.createBufferSource();s.buffer=NBUF;s.loop=true;
+  const f=AC.createBiquadFilter();f.type='highpass';f.frequency.setValueAtTime(300,t);f.frequency.exponentialRampToValueAtTime(6000,t+dur);
+  const g=AC.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+dur);g.gain.linearRampToValueAtTime(0,t+dur+.03);
+  s.connect(f);f.connect(g);g.connect(bus);s.start(t);s.stop(t+dur+.05);
+}
+function kick(bus,t,v){
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+.12);
+  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+.2);
+  o.connect(g);g.connect(bus);o.start(t);o.stop(t+.25);
+}
+
+// genre -> instrument palette (same order as GENRES in both languages)
+const MCFG=[
+ {bpm:78,lead:'triangle',pluck:true,step:1,rest:.15,pad:'sine',padLp:2000,bass:'whole',drums:'none'},
+ {bpm:118,lead:'square',pluck:true,step:.5,rest:.1,pad:'triangle',padLp:2500,bass:'bounce',drums:'pop',pent:true,lp:3000},
+ {bpm:92,lead:'sine',pluck:true,step:1,rest:.5,pad:'sawtooth',padLp:500,bass:'pulse',drums:'heart',vib:6},
+ {bpm:128,lead:'sawtooth',pluck:false,step:.5,rest:.1,pad:'sawtooth',padLp:900,bass:'oompah',drums:'shaker',pent:true,lp:2200},
+ {bpm:124,lead:'square',pluck:false,step:.25,rest:0,pad:'sawtooth',padLp:1200,bass:'pump',drums:'four',arp:true,lp:4000}
+];
+const SCALE={maj:[0,2,4,5,7,9,11],min:[0,2,3,5,7,8,10]};
+const PROGS={maj:[[0,4,5,3],[0,5,3,4],[5,3,0,4]],min:[[0,5,2,6],[0,3,6,2],[0,6,5,4]]};
+const ALLOW={maj:[0,1,2,4,5],min:[0,2,3,4,6]};
+
+// 24 s, matches the trailer: title 0-3, Ep1 3-8.5, Ep2 8.5-14, finale 14-19.5, end card 19.5-24
+function scheduleMusic(m,bus,T0){
+  const r=rng(hash(m.key+'music'));
+  const ti=D().TIERS.findIndex(x=>x.name===m.tier.name);
+  const gi=Math.max(0,D().GENRES.findIndex(g=>g.name===m.story.genre));
+  const C=MCFG[gi];
+  const beat=60/(C.bpm*(ti<=1?.88:ti===4?1.05:1));
+  const root=pick([55,57,58,60,62],r);
+  const mid=(mode,deg)=>root+SCALE[mode][((deg%7)+7)%7]+12*Math.floor(deg/7);
+  const modeA=gi===2?'min':(ti>=2?'maj':'min'),modeB='min',modeC=gi===2?(ti>=3?'maj':'min'):(ti>=2?'maj':'min');
+  const secs=[[0,3,modeA],[3,8.5,modeA],[8.5,14,modeB],[14,19.5,modeC],[19.5,24,modeC]];
+  let cur=9;
+  secs.forEach(([a,b,mode],si)=>{
+    const A=T0+a;
+    if(si===0){
+      [0,2,4].forEach(x=>tone(bus,C.pad,mtof(mid(mode,x)),A,3.2,.04,{a:.5,r:.4,lp:C.padLp}));
+      riser(bus,A+.2,2.7,.05);
+      tone(bus,'sine',mtof(mid(mode,7)+12),A+2.2,1.2,.06,{pluck:true});
+      return;
+    }
+    if(si===4){
+      [0,2,4].forEach(x=>tone(bus,C.pad,mtof(mid(mode,x)),A,4.4,.04,{a:.2,r:1.5,lp:C.padLp}));
+      if(ti===0){
+        [[7,.7],[6,.7],[5,.7],[4,1.6]].forEach(([n,d],i)=>{
+          const t=A+.2+[0,.8,1.6,2.5][i],f=mtof(root+n);
+          tone(bus,'sawtooth',f,t,d,.1,{lp:700,a:.05,r:.1,slideTo:i===3?f*.7:undefined});
+        });
+      }else{
+        [0,2,4,7,4,2].forEach((x,i)=>tone(bus,'sine',mtof(mid(mode,x)+12),A+i*beat,beat*2,.07*(1-i/8),{pluck:true}));
+      }
+      return;
+    }
+    const prog=pick(PROGS[mode],r);
+    let t=a,k=0;
+    while(t<b-1e-6){
+      const cl=Math.min(beat*2,b-t),d=prog[k%4],tt=T0+t,triad=[d,d+2,d+4];
+      // pad
+      triad.forEach(x=>tone(bus,C.pad,mtof(mid(mode,x)),tt,cl,.032,{a:.08,r:.15,lp:C.padLp}));
+      // bass
+      const bn=mid(mode,d)-12,nb=Math.max(1,Math.round(cl/beat));
+      if(C.bass==='whole')tone(bus,'sine',mtof(bn),tt,cl,.12,{a:.03,r:.2});
+      else if(C.bass==='bounce'||C.bass==='pump'){
+        const n=Math.max(1,Math.round(cl/(beat/2)));
+        for(let i=0;i<n;i++)tone(bus,C.bass==='pump'?'square':'triangle',mtof(bn+(C.bass==='bounce'&&i%2?7:0)),tt+i*beat/2,beat/2*.8,C.bass==='pump'?.07:.1,{pluck:true,lp:C.bass==='pump'?500:900});
+      }else if(C.bass==='pulse'){
+        tone(bus,'sine',mtof(bn),tt,beat*.9,.12,{pluck:true});
+        if(cl>beat)tone(bus,'sine',mtof(bn),tt+beat,beat*.6,.09,{pluck:true});
+      }else if(C.bass==='oompah'){
+        for(let i=0;i<nb;i++){
+          if(i%2===0)tone(bus,'triangle',mtof(bn),tt+i*beat,beat*.6,.12,{pluck:true});
+          else triad.forEach(x=>tone(bus,'sawtooth',mtof(mid(mode,x)),tt+i*beat,beat*.35,.025,{pluck:true,lp:1500}));
+        }
+      }
+      // drums (the sad finale stays bare)
+      if(!(si===3&&ti<=1)){
+        for(let i=0;i<nb;i++){
+          const bt=tt+i*beat;
+          if(C.drums==='pop'){if(i%2===0)kick(bus,bt,.5);else noise(bus,bt,.15,.12,'highpass',1800);noise(bus,bt,.04,.05,'highpass',7000);noise(bus,bt+beat/2,.04,.04,'highpass',7000)}
+          else if(C.drums==='shaker'){if(i%2===0)kick(bus,bt,.35);noise(bus,bt,.05,.06,'highpass',6000);noise(bus,bt+beat/2,.05,.04,'highpass',6000)}
+          else if(C.drums==='four'){kick(bus,bt,.5);noise(bus,bt+beat/2,.05,.07,'highpass',7500)}
+          else if(C.drums==='heart'){if(i%2===0){kick(bus,bt,.3);kick(bus,bt+beat*.3,.2)}}
+        }
+      }
+      // lead
+      const stepLen=beat*C.step*(si===2&&!C.arp?.5:1),ns=Math.floor(cl/stepLen+1e-6);
+      const chordTones=triad.map(x=>((x%7)+7)%7),oct=(C.arp?12:0)+(si===3&&ti>=3?12:0);
+      for(let i=0;i<ns;i++){
+        if(r()<C.rest+(si===3&&ti<=1?.3:0))continue;
+        let midi;
+        if(C.arp){const seq=[d,d+2,d+4,d+7,d+4,d+2];midi=mid(mode,seq[(i+k*3)%6])+oct}
+        else{
+          cur+=pick([-2,-1,-1,0,1,1,2],r);cur=Math.max(2,Math.min(16,cur));
+          if(C.pent){let g=0;while(!ALLOW[mode].includes(((cur%7)+7)%7)&&g++<7)cur++}
+          if(i%2===0){for(const off of [0,1,-1,2,-2]){if(chordTones.includes((((cur+off)%7)+7)%7)){cur+=off;break}}}
+          cur=Math.max(2,Math.min(16,cur));
+          midi=mid(mode,cur)+oct;
+        }
+        tone(bus,C.lead,mtof(midi),T0+t+i*stepLen,stepLen*(C.pluck?1.6:.95),(C.arp?.05:.075)*(si===3&&ti<=1?.8:1),{pluck:C.pluck,lp:C.lp,vib:C.vib,a:C.pluck?.01:.03});
+      }
+      t+=cl;k++;
+    }
+    // section events
+    if(si===2){
+      kick(bus,A,.7);noise(bus,A,.6,.2,'lowpass',2000,200);
+      if(gi===2){tone(bus,'sawtooth',mtof(root-12),A,.8,.1,{lp:400,slideTo:mtof(root-12)*.8});tone(bus,'sine',mtof(root+18),A,.8,.05)}
+      if(gi===4){for(let i=0;i<40;i++)if(r()<.4)tone(bus,'square',mtof(root+24+SCALE.min[Math.floor(r()*7)]),A+.5+i*.12,.06,.04,{pluck:true})}
+      riser(bus,T0+12,1.9,.07);
+    }
+    if(si===3){
+      if(ti>=2)noise(bus,A,1.4,.15,'highpass',5000);
+      if(ti===4){[0,4,0].forEach((x,i)=>[0,2,4].forEach(y=>tone(bus,'sawtooth',mtof(mid(mode,x+y)),A+i*beat,beat*.9,.05,{lp:1800,a:.02,r:.1})))}
+      if(gi===4&&ti>=2){tone(bus,'sine',mtof(root+31),A+.05,1,.07,{pluck:true});tone(bus,'sine',mtof(root+36),A+.2,1,.06,{pluck:true})}
+    }
+  });
+  bus.gain.setValueAtTime(1,T0+23);bus.gain.linearRampToValueAtTime(0,T0+24);
+}
+function playMusic(m){
+  if(!MUSIC_ON)return;
+  try{
+    const ac=audioCtx();if(!ac)return;
+    stopMusic();
+    const bus=ac.createGain();bus.gain.value=1;bus.connect(MASTER);CUR_BUS=bus;
+    scheduleMusic(m,bus,ac.currentTime+.08);
+  }catch(e){console.warn('music',e)}
+}
+
+
+function sceneSVG(m){
+  const r=rng(hash(m.key+'scene'));
+  const skins=['#f3c9a5','#e0a97c','#c68642','#8d5524'],hairs=['#2b1b17','#4a2c2a','#1c1c1c','#6b3e26'],shirts=['#ff4d8d','#4d9bff','#ffd166','#6be3a0','#b388ff'];
+  const theme=['rain','sunset','night','cafe'][Math.floor(r()*4)];
+  const cx=200,off=Math.round(100-m.score*0.6),xa=cx-off,xb=cx+off;
+  const person=(x,ini)=>{const sk=pick(skins,r),hr=pick(hairs,r),sh=pick(shirts,r);
+    return `<rect x="${x-28}" y="145" width="56" height="75" rx="24" fill="${sh}"/>`+
+    `<circle cx="${x}" cy="112" r="30" fill="${sk}"/>`+
+    `<path d="M${x-31},110 A31,31 0 0 1 ${x+31},110 Q${x},88 ${x-31},110Z" fill="${hr}"/>`+
+    `<circle cx="${x-11}" cy="114" r="3.2" fill="#222"/><circle cx="${x+11}" cy="114" r="3.2" fill="#222"/>`+
+    `<circle cx="${x-19}" cy="124" r="5" fill="#ff8aa8" opacity=".6"/><circle cx="${x+19}" cy="124" r="5" fill="#ff8aa8" opacity=".6"/>`+
+    `<path d="M${x-8},124 Q${x},132 ${x+8},124" stroke="#222" stroke-width="2" fill="none" stroke-linecap="round"/>`+
+    `<text x="${x}" y="190" text-anchor="middle" font-size="26" font-weight="900" fill="#fff" font-family="Arial,sans-serif">${esc(ini)}</text>`};
+  const grad=(c1,c2)=>`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="400" height="240" fill="url(#g)"/>`;
+  let bg='';
+  if(theme==='rain'){
+    bg=grad('#6a7b99','#2f3b52');
+    for(let i=0;i<40;i++){const x=Math.floor(r()*400),y=Math.floor(r()*220);bg+=`<line x1="${x}" y1="${y}" x2="${x-6}" y2="${y+16}" stroke="#cfe3ff" stroke-opacity=".6" stroke-width="2"/>`}
+    bg+=`<path d="M${cx-95},78 Q${cx},-25 ${cx+95},78 Q${cx+60},64 ${cx+32},78 Q${cx},64 ${cx-32},78 Q${cx-60},64 ${cx-95},78Z" fill="#ff4d8d"/>`;
+  }else if(theme==='sunset'){
+    bg=grad('#ffb347','#ff4d8d')+`<circle cx="200" cy="170" r="60" fill="#ffd166"/><rect y="205" width="400" height="35" fill="#5a2a5a"/>`;
+  }else if(theme==='night'){
+    bg=grad('#0b1030','#3b1f6b');
+    for(let i=0;i<18;i++){bg+=`<circle cx="${Math.floor(r()*400)}" cy="${Math.floor(r()*130)}" r="${1+r()*1.6}" fill="#fff" opacity=".85"/>`}
+    bg+=`<circle cx="338" cy="44" r="22" fill="#fff6c9"/>`;
+  }else{
+    bg=grad('#ffd9e8','#ffb3d1');
+    for(let i=0;i<6;i++){const x=40+i*64;bg+=`<line x1="${x}" y1="0" x2="${x}" y2="30" stroke="#8a3a8a"/><circle cx="${x}" cy="38" r="9" fill="#ffd166"/>`}
+  }
+  let extra='';
+  if(m.score<25)extra+=`<text x="${cx}" y="205" text-anchor="middle" font-size="46">🧱</text>`;
+  if(m.score>=50&&theme!=='rain')extra+=`<text x="${cx}" y="68" text-anchor="middle" font-size="${18+Math.round(m.score/5)}">❤️</text>`;
+  if(m.score>=75)extra+=`<text x="40" y="60" font-size="22">💕</text><text x="350" y="100" font-size="22">💕</text>`;
+  const cap=`<text x="200" y="233" text-anchor="middle" font-size="16" font-weight="800" fill="#fff" stroke="#000" stroke-opacity=".35" stroke-width="3" paint-order="stroke" font-family="Arial,sans-serif">${esc(m.ship)} · ${m.score}/100</text>`;
+  const A=person(xa,m.a[0]),B=person(xb,m.b[0]);
+  return `<svg id="scene" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" width="400" height="240" style="width:100%;height:auto;border-radius:14px;display:block">${bg}${A}${B}${extra}${cap}</svg>`;
+}
+
+
+function miniHTML(m){
+  return `<div class="card"><div class="mini">
+    <div><div class="pair" style="text-align:left">${esc(m.a)} + ${esc(m.b)}</div>
+    <div class="ship">${esc(m.ship)}</div>
+    <div style="font-size:.8rem">${m.tier.name}</div></div>
+    <div class="s">${m.score}</div></div>
+    <div class="row quote" style="margin-bottom:0">"${esc(m.confession)}"</div></div>`;
+}
+
+let LASTM=null;
+const ease=p=>1-Math.pow(1-p,3);
+function heart(ctx,x,y,s){ctx.beginPath();ctx.moveTo(x,y+s*.3);ctx.bezierCurveTo(x,y-s*.3,x-s,y-s*.3,x-s,y+s*.3);ctx.bezierCurveTo(x-s,y+s*.8,x,y+s,x,y+s*1.3);ctx.bezierCurveTo(x,y+s,x+s,y+s*.8,x+s,y+s*.3);ctx.bezierCurveTo(x+s,y-s*.3,x,y-s*.3,x,y+s*.3);ctx.fill()}
+function wrapText(ctx,text,maxW){const words=text.split(' ');const lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=w}else cur=t}if(cur)lines.push(cur);return lines}
+
+function drawTrailer(ctx,img,m,SEG,t){
+  const W=800,H=450;
+  ctx.globalAlpha=1;ctx.textAlign='center';
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  const s=SEG.find(x=>t>=x.t&&t<x.t+x.d)||SEG[SEG.length-1];
+  const p=Math.min(1,Math.max(0,(t-s.t)/s.d));
+  if(s.type==='title'||s.type==='end'){
+    const g=ctx.createLinearGradient(0,0,0,H);
+    if(s.type==='title'){g.addColorStop(0,'#7b2cbf');g.addColorStop(1,'#12031c')}else{g.addColorStop(0,'#ff4d8d');g.addColorStop(1,'#2b0a3d')}
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    for(let i=0;i<10;i++){ctx.fillStyle='rgba(255,255,255,'+(0.12+(i%3)*0.07)+')';heart(ctx,(i*97+t*20)%W,H-((t*45+i*61)%(H+40)),6+(i%4)*3)}
+    if(s.type==='title'){
+      ctx.fillStyle='rgba(255,255,255,'+Math.min(1,p*3)+')';ctx.font='600 20px system-ui,sans-serif';ctx.fillText('cue-pid presents',W/2,130);
+      let fs=84;ctx.font='900 '+fs+'px system-ui,sans-serif';
+      while(ctx.measureText(m.ship).width>680&&fs>30){fs-=6;ctx.font='900 '+fs+'px system-ui,sans-serif'}
+      const sc=0.6+0.4*ease(Math.min(1,p*2));
+      ctx.save();ctx.translate(W/2,235);ctx.scale(sc,sc);ctx.globalAlpha=Math.min(1,p*3);ctx.fillStyle='#ff4d8d';ctx.fillText(m.ship,0,0);ctx.restore();
+      ctx.globalAlpha=Math.min(1,Math.max(0,(p-.4)*3));ctx.fillStyle='#fff';
+      ctx.font='700 24px system-ui,sans-serif';ctx.fillText(m.a+'  +  '+m.b,W/2,290);
+      ctx.font='500 20px system-ui,sans-serif';ctx.fillText(U().aGenre(m.story.genre),W/2,330);
+      ctx.globalAlpha=1;
+    }else{
+      ctx.fillStyle='#fff';ctx.font='700 22px system-ui,sans-serif';ctx.fillText(U().scoreCap,W/2,95);
+      const sc=Math.round(m.score*ease(Math.min(1,p*1.6)));
+      ctx.fillStyle='#ffd166';ctx.font='900 110px system-ui,sans-serif';ctx.fillText(sc+'/100',W/2,205);
+      ctx.fillStyle='#fff';ctx.font='800 26px system-ui,sans-serif';ctx.fillText(m.tier.name,W/2,252);
+      ctx.font='italic 21px system-ui,sans-serif';
+      wrapText(ctx,m.pun,700).forEach((l,i)=>ctx.fillText(l,W/2,308+i*28));
+      ctx.fillStyle='#ffc2dc';ctx.font='700 20px system-ui,sans-serif';ctx.fillText(m.tag,W/2,396);
+      ctx.fillStyle='#fff';ctx.font='900 24px system-ui,sans-serif';ctx.fillText('cue-pid',W/2,430);
+    }
+  }else{
+    const z=s.zoom[0]+(s.zoom[1]-s.zoom[0])*ease(p);
+    let ox=0,oy=0;if(s.shake){ox=Math.sin(t*50)*5*(1-p);oy=Math.cos(t*43)*4*(1-p)}
+    const w=800*z,h=480*z;
+    ctx.drawImage(img,400-w/2+ox,225-h/2+oy,w,h);
+    const gg=ctx.createLinearGradient(0,230,0,H);gg.addColorStop(0,'rgba(0,0,0,0)');gg.addColorStop(1,'rgba(0,0,0,.88)');
+    ctx.fillStyle=gg;ctx.fillRect(0,230,W,220);
+    if(s.hearts){ctx.fillStyle='rgba(255,77,141,.85)';for(let i=0;i<14;i++)heart(ctx,(i*61+30)%W,H-((t*70+i*43)%(H+30)),7+(i%4)*4)}
+    if(s.shake&&p<.1){ctx.fillStyle='rgba(255,0,0,'+(0.3*(1-p/.1))+')';ctx.fillRect(0,0,W,H)}
+    ctx.fillStyle='#000';ctx.fillRect(0,0,W,34);
+    ctx.textAlign='left';ctx.fillStyle='#ffd166';ctx.font='800 18px system-ui,sans-serif';ctx.fillText(s.label,16,24);
+    ctx.textAlign='right';ctx.fillStyle='#fff';ctx.fillText('cue-pid',W-16,24);
+    ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='600 19px system-ui,sans-serif';
+    const lines=wrapText(ctx,s.text,720);let rem=Math.floor(s.text.length*Math.min(1,p/.75));
+    lines.forEach((l,i)=>{ctx.fillText(l.slice(0,Math.max(0,Math.min(l.length,rem))),40,314+i*26);rem-=l.length+1});
+  }
+  const f=Math.min(1,(t-s.t)/.35);
+  if(f<1){ctx.fillStyle='rgba(0,0,0,'+(1-f)+')';ctx.fillRect(0,0,W,H)}
+}
+
+function makeTrailer(m){
+  const box=$('#trailerBox');if(!box)return;
+  box.innerHTML='<canvas id="tc" width="800" height="450" style="width:100%;border-radius:14px;background:#000;margin-top:8px;display:block"></canvas><div id="tstat" class="tiny" style="color:#2b0a3d">'+U().rendering+'</div>';
+  const cv=$('#tc'),ctx=cv.getContext('2d');
+  const SEG=[
+    {t:0,d:3,type:'title'},
+    {t:3,d:5.5,type:'scene',label:U().ep1,text:m.story.parts[0],zoom:[1,1.15]},
+    {t:8.5,d:5.5,type:'scene',label:U().ep2,text:m.story.parts[1],zoom:[1.15,1],shake:true},
+    {t:14,d:5.5,type:'scene',label:U().ep3,text:m.story.parts[2],zoom:[1,1.2],hearts:true},
+    {t:19.5,d:4.5,type:'end'}
+  ];
+  const TOTAL=24;
+  const img=new Image();
+  img.onload=()=>{
+    let rec=null,chunks=[],mime='';
+    try{
+      if(window.MediaRecorder&&cv.captureStream){
+        mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'].find(x=>MediaRecorder.isTypeSupported(x))||'';
+        if(mime){
+          const vs=cv.captureStream(30);
+          if(MUSIC_ON&&audioCtx()&&MDEST)MDEST.stream.getAudioTracks().forEach(tr=>vs.addTrack(tr));
+          rec=new MediaRecorder(vs,{mimeType:mime});
+          rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+          rec.onstop=()=>finish(URL.createObjectURL(new Blob(chunks,{type:mime})),mime.indexOf('mp4')>=0?'mp4':'webm');
+          rec.start();
+        }
+      }
+    }catch(e){rec=null}
+    if(MUSIC_ON)playMusic(m);
+    const t0=performance.now();
+    const tick=now=>{
+      const t=Math.min(TOTAL,(now-t0)/1000);
+      drawTrailer(ctx,img,m,SEG,t);
+      if(t<TOTAL)requestAnimationFrame(tick);
+      else if(rec&&rec.state!=='inactive')rec.stop();
+      else finish(null,'');
+    };
+    requestAnimationFrame(tick);
+  };
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(sceneSVG(m));
+  function finish(url,ext){
+    let h='';
+    if(url)h+='<a href="'+url+'" download="cue-pid-trailer.'+ext+'" style="display:block;text-align:center;margin-top:8px;padding:9px;border-radius:10px;border:2px dashed #ff4d8d;color:#ff4d8d;font-weight:700;text-decoration:none">'+U().download(ext)+'</a>';
+    h+='<button class="go trailer" style="margin-top:8px">'+U().replay+'</button>';
+    $('#tstat').innerHTML=h;
+  }
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest('.trailer')&&LASTM){if(MUSIC_ON)audioCtx();makeTrailer(LASTM)}
+});
+
+function animateBars(){
+  requestAnimationFrame(()=>setTimeout(()=>document.querySelectorAll('.bar i').forEach(i=>i.style.width=i.dataset.w+'%'),50));
+}
+
+function theatrics(then){
+  const out=$('#out');let i=0;
+  out.innerHTML=`<div class="loading"><span class="heart">💗</span><div id="lm">${D().LOADING[0]}</div></div>`;
+  const t=setInterval(()=>{i=(i+1)%D().LOADING.length;const el=$('#lm');if(el)el.textContent=D().LOADING[i]},500);
+  setTimeout(()=>{clearInterval(t);then();animateBars()},1800);
+}
+
+$('#goDuo').onclick=()=>{
+  const a=$('#n1').value.trim(),b=$('#n2').value.trim();
+  if(!a||!b){$('#out').innerHTML='<div class="loading">'+U().errDuo+'</div>';return}
+  const m0=match(a,b);playMusic(m0);
+  theatrics(()=>{LASTM=m0;$('#out').innerHTML=cardHTML(LASTM)});
+};
+
+$('#goRoom').onclick=()=>{
+  const names=$('#names').value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+  if(names.length<2){$('#out').innerHTML='<div class="loading">'+U().errRoom+'</div>';return}
+  playMusic(match(names[0],names[1]));
+  theatrics(()=>{
+    const r=rng(hash(names.map(n=>n.toLowerCase()).sort().join('|')));
+    const arr=[...names];
+    for(let i=arr.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}
+    let html='';
+    for(let i=0;i+1<arr.length;i+=2){html+=miniHTML(match(arr[i],arr[i+1]))}
+    if(arr.length%2===1){
+      const x=esc(cap(arr[arr.length-1]));
+      html+=`<div class="card"><div class="ship">${x}</div><div class="tier">${U().thirdTitle}</div>
+      <div class="row">${U().thirdBody(x)}</div></div>`;
+    }
+    $('#out').innerHTML=html;
+  });
+};
+
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));
+  $('#duo').classList.toggle('hide',b.dataset.t!=='duo');
+  $('#room').classList.toggle('hide',b.dataset.t!=='room');
+  $('#out').innerHTML='';
+});
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.save'))return;
+  const svg=document.getElementById('scene');if(!svg)return;
+  const img=new Image();
+  img.onload=()=>{const c=document.createElement('canvas');c.width=800;c.height=480;
+    c.getContext('2d').drawImage(img,0,0,800,480);
+    c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cue-pid-lovestory.png';a.click()})};
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(svg));
+});
+document.addEventListener('click',e=>{
+  const c=e.target.closest('.copy');if(!c||c.classList.contains('save')||c.classList.contains('trailer'))return;
+  const txt=decodeURIComponent(c.dataset.copy);
+  (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(
+    ()=>c.textContent=U().copied,
+    ()=>{const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();c.textContent=U().copiedShort});
+});
+
+function applyLang(){
+  const u=U();
+  $('#tag').textContent=u.tag;$('#tabDuo').textContent=u.tabDuo;$('#tabRoom').textContent=u.tabRoom;
+  $('#n1').placeholder=u.n1;$('#n2').placeholder=u.n2;$('#goDuo').textContent=u.goDuo;
+  $('#names').placeholder=u.namesPh;$('#goRoom').textContent=u.goRoom;$('#foot').textContent=u.foot;
+  document.querySelectorAll('.lang button[data-l]').forEach(b=>b.classList.toggle('on',b.dataset.l===LANG));
+  $('#musicBtn').textContent=MUSIC_ON?u.musicOn:u.musicOff;
+  document.documentElement.lang=LANG==='en'?'en':'tl';
+}
+document.querySelectorAll('.lang button[data-l]').forEach(b=>b.onclick=()=>{
+  LANG=b.dataset.l;applyLang();
+  if(LASTM&&$('#trailerBox')){LASTM=match(LASTM.a,LASTM.b);$('#out').innerHTML=cardHTML(LASTM);animateBars()}
+  else $('#out').innerHTML='';
+});
+$('#musicBtn').onclick=()=>{
+  MUSIC_ON=!MUSIC_ON;
+  if(MUSIC_ON){if(LASTM)playMusic(LASTM)}else stopMusic();
+  applyLang();
+};
+applyLang();
+</script>
+</body>
+</html>
