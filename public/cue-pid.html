@@ -13,9 +13,6 @@
   h1{font-size:2.6rem;margin:6px 0 0;letter-spacing:-1px;text-align:center}
   h1 span{color:var(--pink)}
   .tag{text-align:center;opacity:.85;margin:4px 0 18px;font-size:.95rem}
-  .tabs{display:flex;gap:8px;margin-bottom:12px}
-  .tab{flex:1;padding:10px;border:2px solid #ffffff33;background:transparent;color:#fff;border-radius:12px;font-weight:700;cursor:pointer}
-  .tab.on{background:var(--pink);border-color:var(--pink)}
   .panel{background:#ffffff14;border:1px solid #ffffff22;border-radius:16px;padding:16px}
   input,textarea{width:100%;padding:12px;border-radius:10px;border:none;font-size:1rem;margin-bottom:10px;font-family:inherit}
   textarea{min-height:110px;resize:vertical}
@@ -48,33 +45,60 @@
   .lang button#musicBtn{margin-left:8px;border-style:dashed}
   .lang button.on{background:#fff;color:#2b0a3d}
   .hide{display:none}
+  .wheel-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .wheel-inputs label{font-weight:700;font-size:.8rem}
+  .wheel-inputs textarea{margin-top:6px;min-height:78px;font-size:.85rem}
+  .wheels{display:flex;justify-content:center;margin:18px 0}
+  .wheel-stage{position:relative;width:min(76vw,320px);aspect-ratio:1;margin:20px 0}
+  .wheel-pointer{position:absolute;left:50%;transform:translateX(-50%);color:var(--gold);font-size:25px;line-height:1;z-index:3;white-space:nowrap}
+  .wheel-pointer span{font-size:11px;vertical-align:middle;color:#fff}
+  .female-pointer{top:-25px}.male-pointer{top:76%}
+  .wheel{position:absolute;border:4px solid #ffd166;border-radius:50%;transition:transform 3s cubic-bezier(.12,.74,.15,1);box-shadow:0 6px 24px #0006}
+  #femaleWheel{inset:0;width:100%;height:100%}
+  #maleWheel{inset:24%;width:52%;height:52%;z-index:1;border-color:#fff}
+  .spin-result{text-align:center;font-weight:800;min-height:1.5em;margin-bottom:10px}
+  .video-code{margin-top:8px;border:1px solid #ead0df}
+  .video-note{font-size:.8rem;line-height:1.4}
+  video{max-width:100%;border-radius:10px;margin-top:10px}
+  button:disabled{opacity:.55;cursor:wait}
+  @media(prefers-reduced-motion:reduce){.wheel{transition-duration:.01s}}
+
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="lang"><button data-l="tl" class="on">Taglish</button><button data-l="en">English</button><button id="musicBtn" type="button">Musika: On</button></div>
   <h1>cue-<span>pid</span></h1>
-  <div class="tag" id="tag">Cue the music. Cue-pid has spoken. Walang bawian.</div>
-
-  <div class="tabs">
-    <button class="tab on" id="tabDuo" data-t="duo">Duo</button>
-    <button class="tab" id="tabRoom" data-t="room">Match the Room</button>
-  </div>
+  <div class="tag" id="tag">Pumili ng mga pangalan at tingnan ang match.</div>
 
   <div class="panel" id="duo">
+    <div class="wheel-inputs">
+      <label>Female characters<textarea id="femaleNames" aria-label="Female character names">Anna
+Mia
+Luna
+Sofia</textarea></label>
+      <label>Male characters<textarea id="maleNames" aria-label="Male character names">Marco
+Kai
+Leo
+Ethan</textarea></label>
+    </div>
+    <div class="wheels"><div class="wheel-stage">
+      <div class="wheel-pointer female-pointer" aria-hidden="true"><span>FEMALE</span> ▼</div>
+      <svg id="femaleWheel" class="wheel" viewBox="0 0 200 200" aria-label="Female character wheel"></svg>
+      <svg id="maleWheel" class="wheel" viewBox="0 0 200 200" aria-label="Male character wheel"></svg>
+      <div class="wheel-pointer male-pointer" aria-hidden="true">▲ <span>MALE</span></div>
+    </div></div>
+    <div id="spinResult" class="spin-result" aria-live="polite">Add names and spin to find a match.</div>
+    <button class="go" id="spinWheel" type="button">Spin the wheel</button>
+    <p style="text-align:center;font-size:.8rem;opacity:.8">Or enter two names directly</p>
     <input id="n1" placeholder="Pangalan #1 (e.g. Mark)" autocomplete="off">
     <div class="plus">+</div>
     <input id="n2" placeholder="Pangalan #2 (e.g. Anna)" autocomplete="off">
     <button class="go" id="goDuo">Cue the Music</button>
   </div>
 
-  <div class="panel hide" id="room">
-    <textarea id="names" placeholder="Isang pangalan per line (or separated by commas). Minimum 2, pero mas marami mas chaos."></textarea>
-    <button class="go" id="goRoom">Pair Everyone, Walang Takas</button>
-  </div>
-
   <div id="out"></div>
-  <div class="tiny" id="foot" style="margin-top:20px">For entertainment only. Cue-pid is not liable for heartbreaks, GC drama, or "friends na lang tayo" speeches.</div>
+  <div class="tiny" id="foot" style="margin-top:20px">For entertainment only.</div>
 </div>
 
 <script>
@@ -488,18 +512,15 @@ const D=()=>LANG==='en'?EN:TL;
 
 const UI={
  tl:{
-  tag:"Cue the music. Cue-pid has spoken. Walang bawian.",tabDuo:"Duo",tabRoom:"Match the Room",
+  tag:"Pumili ng mga pangalan at tingnan ang match.",
   n1:"Pangalan #1 (e.g. Mark)",n2:"Pangalan #2 (e.g. Anna)",
-  namesPh:"Isang pangalan per line (or separated by commas). Minimum 2, pero mas marami mas chaos.",
-  goDuo:"Cue the Music",goRoom:"Pair Everyone, Walang Takas",
-  foot:"For entertainment only. Cue-pid is not liable for heartbreaks, GC drama, or 'friends na lang tayo' speeches.",
+  goDuo:"Tingnan ang match",
+  foot:"Para sa katuwaan lang.",
   errDuo:"Dalawang pangalan po, hindi po marunong mag-match si Cue-pid ng hangin.",
-  errRoom:"Kulang! Kailangan ng at least 2. Hindi pwedeng mag-date mag-isa (maliban kung self-love arc).",
   selfLove:a=>`${a} + ${a}? Self-love arc! Narcissus nod, pero respeto. Mag-date kayo sa salamin.`,
-  tagSuf:"ForeverChar",thirdTitle:"THIRD WHEEL HALL OF FAME",
-  thirdBody:x=>`Walang partner today, pero si ${x} ang MVP: taga-hawak ng bag, taga-picture, taga-'uy bagay kayo'. Next season, kayo naman.`,
+  tagSuf:"ForeverChar",
   alt:"alt name:",scoreSuf:"kilig",
-  art:"Opisyal na larawan ng love team (gawa ng Cue-pid Art Dept: isang intern at isang crayon)",save:"I-save ang larawan (PNG)",
+  art:"Larawan ng match",save:"I-save ang larawan (PNG)",
   story:(s,g)=>`Ang Kwento ng ${s} (${g})`,ep1:"Ep. 1: Ang Pagkikita",ep2:"Ep. 2: Ang Gulo",ep3:"Finale: Ang Wakas",
   pun:"Banat ni Cue-pid",trailerRow:"Opisyal na Trailer (video, 24 segundo)",trailerBtn:"Gumawa ng Trailer",
   confession:"Confession Room",twist:"Next Episode Plot Twist",green:"Green flag",red:"Red flag",
@@ -511,18 +532,15 @@ const UI={
   copyText:m=>`cue-pid says: ${m.a} + ${m.b} = ${m.ship}\nKilig score: ${m.score}/100 (${m.tier.name})\n"${m.confession}"\n${m.tag}`
  },
  en:{
-  tag:"Cue the music. Cue-pid has spoken. No take-backs.",tabDuo:"Duo",tabRoom:"Match the Room",
+  tag:"Add names and see who matches.",
   n1:"Name #1 (e.g. Mark)",n2:"Name #2 (e.g. Anna)",
-  namesPh:"One name per line (or comma-separated). Minimum 2, but more names means more chaos.",
-  goDuo:"Cue the Music",goRoom:"Pair Everyone, No Escape",
-  foot:"For entertainment only. Cue-pid is not liable for heartbreaks, group chat drama, or 'let's just be friends' speeches.",
+  goDuo:"See the match",
+  foot:"For entertainment only.",
   errDuo:"Two names please. Cue-pid can't match thin air.",
-  errRoom:"Not enough! You need at least 2. No dating yourself (unless it's a self-love arc).",
   selfLove:a=>`${a} + ${a}? Self-love arc! A nod to Narcissus, but respect. Go on a date in the mirror.`,
-  tagSuf:"Forever",thirdTitle:"THIRD WHEEL HALL OF FAME",
-  thirdBody:x=>`No partner today, but ${x} is the MVP: bag holder, photographer, and professional 'you two look so good together' guy. Next season, it's your turn.`,
+  tagSuf:"Forever",
   alt:"alt name:",scoreSuf:"butterflies",
-  art:"Official love team portrait (by the Cue-pid Art Dept: one intern and one crayon)",save:"Save picture (PNG)",
+  art:"Match portrait",save:"Save picture (PNG)",
   story:(s,g)=>`The Story of ${s} (${g})`,ep1:"Ep. 1: The Meet-Cute",ep2:"Ep. 2: The Mess",ep3:"Finale: The Ending",
   pun:"Cue-pid's Pickup Line",trailerRow:"Official Trailer (video, 24 seconds)",trailerBtn:"Make Trailer",
   confession:"Confession Room",twist:"Next Episode Plot Twist",green:"Green flag",red:"Red flag",
@@ -555,6 +573,11 @@ function cardHTML(m){
       <p style="margin:6px 0"><strong>${u.ep3}.</strong> ${esc(m.story.parts[2])}</p></div>
     <div class="row"><b>${u.pun}</b>${esc(m.pun)}</div>
     <div class="row"><b>${u.trailerRow}</b><button class="go trailer" style="margin-top:6px">${u.trailerBtn}</button><div id="trailerBox"></div></div>
+    <div class="row"><b>AI video of your match</b>
+      <p class="video-note">Generate a short Veo video. This uses the owner's paid Google API account.</p>
+      <input class="video-code" type="password" placeholder="Video access code" autocomplete="off" aria-label="Video access code">
+      <button class="go ai-video" type="button">Generate AI video</button><div class="ai-status" role="status" aria-live="polite"></div>
+    </div>
     <div class="row"><b>${u.confession}</b><span class="quote">"${esc(m.confession)}"</span></div>
     <div class="row"><b>${u.twist}</b>${esc(m.twist)}</div>
     <div class="row"><b>${u.green}</b>${esc(m.a)} ${esc(m.green)}</div>
@@ -779,15 +802,6 @@ function sceneSVG(m){
 }
 
 
-function miniHTML(m){
-  return `<div class="card"><div class="mini">
-    <div><div class="pair" style="text-align:left">${esc(m.a)} + ${esc(m.b)}</div>
-    <div class="ship">${esc(m.ship)}</div>
-    <div style="font-size:.8rem">${m.tier.name}</div></div>
-    <div class="s">${m.score}</div></div>
-    <div class="row quote" style="margin-bottom:0">"${esc(m.confession)}"</div></div>`;
-}
-
 let LASTM=null;
 const ease=p=>1-Math.pow(1-p,3);
 function heart(ctx,x,y,s){ctx.beginPath();ctx.moveTo(x,y+s*.3);ctx.bezierCurveTo(x,y-s*.3,x-s,y-s*.3,x-s,y+s*.3);ctx.bezierCurveTo(x-s,y+s*.8,x,y+s,x,y+s*1.3);ctx.bezierCurveTo(x,y+s,x+s,y+s*.8,x+s,y+s*.3);ctx.bezierCurveTo(x+s,y-s*.3,x,y-s*.3,x,y+s*.3);ctx.fill()}
@@ -906,38 +920,66 @@ function theatrics(then){
   setTimeout(()=>{clearInterval(t);then();animateBars()},1800);
 }
 
+// Each pointer aligns with the centre of its chosen segment.
+const wheelColors=['#ff4d8d','#7b2cbf','#ff8a5c','#4633a8','#d655a4','#8054c8','#e58c4c','#a74672'];
+const lists=id=>$(id).value.split(/[\n,]+/).map(x=>x.trim()).filter(Boolean).slice(0,12);
+let turns=[0,0];
+function drawWheel(el,names){
+  const n=names.length;if(!n){el.innerHTML='';return}
+  el.innerHTML=names.map((name,i)=>{
+    const a=2*Math.PI*i/n-Math.PI/2,b=2*Math.PI*(i+1)/n-Math.PI/2;
+    const x1=100+99*Math.cos(a),y1=100+99*Math.sin(a),x2=100+99*Math.cos(b),y2=100+99*Math.sin(b);
+    const path=n===1?'<circle cx="100" cy="100" r="99" fill="'+wheelColors[0]+'"/>':'<path d="M100 100 L'+x1+' '+y1+' A99 99 0 '+(n>1&&1/n>.5?1:0)+' 1 '+x2+' '+y2+' Z" fill="'+wheelColors[i%wheelColors.length]+'"/>';
+    const angle=360*(i+.5)/n-90;
+    return path+'<text x="176" y="104" transform="rotate('+angle+' 100 100)" fill="white" font-size="'+(n>8?8:11)+'" font-weight="bold" text-anchor="middle">'+esc(name.slice(0,11))+'</text>';
+  }).join('');
+}
+function renderWheels(){drawWheel($('#femaleWheel'),lists('#femaleNames'));drawWheel($('#maleWheel'),lists('#maleNames'))}
+$('#femaleNames').addEventListener('input',renderWheels);$('#maleNames').addEventListener('input',renderWheels);renderWheels();
+$('#spinWheel').onclick=()=>{
+  const groups=[lists('#femaleNames'),lists('#maleNames')];
+  if(groups.some(x=>!x.length)){ $('#spinResult').textContent='Add at least one name to each wheel.';return }
+  const button=$('#spinWheel');button.disabled=true;$('#femaleNames').disabled=true;$('#maleNames').disabled=true;
+  const chosen=groups.map((names,i)=>{
+    const index=Math.floor(Math.random()*names.length);
+    const target=((i===1?180:0)-360*(index+.5)/names.length+360)%360;
+    turns[i]+=1800+((target-turns[i]%360+360)%360);
+    $(["#femaleWheel","#maleWheel"][i]).style.transform='rotate('+turns[i]+'deg)';
+    return names[index];
+  });
+  $('#spinResult').textContent='Finding your match…';
+  const delay=matchMedia('(prefers-reduced-motion: reduce)').matches?50:3000;
+  setTimeout(()=>{button.disabled=false;$('#femaleNames').disabled=false;$('#maleNames').disabled=false;$('#spinResult').textContent=chosen.join(' + ');$('#n1').value=chosen[0];$('#n2').value=chosen[1];$('#goDuo').click()},delay);
+};
+
+document.addEventListener('click',async e=>{
+  const btn=e.target.closest('.ai-video');if(!btn||!LASTM)return;
+  const card=btn.closest('.card'),status=card.querySelector('.ai-status'),code=card.querySelector('.video-code').value;
+  if(!code){status.textContent='Enter the video access code.';return}
+  btn.disabled=true;status.textContent='Starting your video…';
+  const request=async body=>{const r=await fetch('/api/video',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,code})});if(!r.ok){const d=await r.json();throw Error(d.error||'Video generation failed.')}return r};
+  try{
+    const start=await (await request({action:'start',female:LASTM.a,male:LASTM.b})).json();
+    let complete=false;
+    for(let i=0;i<90;i++){
+      await new Promise(resolve=>setTimeout(resolve,10000));
+      const data=await (await request({action:'status',operation:start.operation})).json();
+      if(data.done){complete=true;break} status.textContent='Creating your video… this can take a few minutes.';
+    }
+    if(!complete)throw Error('Video is taking longer than expected. Please try again later.');
+    status.textContent='Loading your video…';
+    const blob=await (await request({action:'download',operation:start.operation})).blob();
+    const video=document.createElement('video');video.controls=true;video.src=URL.createObjectURL(blob);status.replaceChildren(video);
+  }catch(err){status.textContent=err.message||'Video generation failed.'}
+  finally{btn.disabled=false}
+});
+
 $('#goDuo').onclick=()=>{
   const a=$('#n1').value.trim(),b=$('#n2').value.trim();
   if(!a||!b){$('#out').innerHTML='<div class="loading">'+U().errDuo+'</div>';return}
   const m0=match(a,b);playMusic(m0);
   theatrics(()=>{LASTM=m0;$('#out').innerHTML=cardHTML(LASTM)});
 };
-
-$('#goRoom').onclick=()=>{
-  const names=$('#names').value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
-  if(names.length<2){$('#out').innerHTML='<div class="loading">'+U().errRoom+'</div>';return}
-  playMusic(match(names[0],names[1]));
-  theatrics(()=>{
-    const r=rng(hash(names.map(n=>n.toLowerCase()).sort().join('|')));
-    const arr=[...names];
-    for(let i=arr.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}
-    let html='';
-    for(let i=0;i+1<arr.length;i+=2){html+=miniHTML(match(arr[i],arr[i+1]))}
-    if(arr.length%2===1){
-      const x=esc(cap(arr[arr.length-1]));
-      html+=`<div class="card"><div class="ship">${x}</div><div class="tier">${U().thirdTitle}</div>
-      <div class="row">${U().thirdBody(x)}</div></div>`;
-    }
-    $('#out').innerHTML=html;
-  });
-};
-
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
-  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));
-  $('#duo').classList.toggle('hide',b.dataset.t!=='duo');
-  $('#room').classList.toggle('hide',b.dataset.t!=='room');
-  $('#out').innerHTML='';
-});
 
 document.addEventListener('click',e=>{
   if(!e.target.closest('.save'))return;
@@ -958,9 +1000,9 @@ document.addEventListener('click',e=>{
 
 function applyLang(){
   const u=U();
-  $('#tag').textContent=u.tag;$('#tabDuo').textContent=u.tabDuo;$('#tabRoom').textContent=u.tabRoom;
+  $('#tag').textContent=u.tag;
   $('#n1').placeholder=u.n1;$('#n2').placeholder=u.n2;$('#goDuo').textContent=u.goDuo;
-  $('#names').placeholder=u.namesPh;$('#goRoom').textContent=u.goRoom;$('#foot').textContent=u.foot;
+  $('#foot').textContent=u.foot;
   document.querySelectorAll('.lang button[data-l]').forEach(b=>b.classList.toggle('on',b.dataset.l===LANG));
   $('#musicBtn').textContent=MUSIC_ON?u.musicOn:u.musicOff;
   document.documentElement.lang=LANG==='en'?'en':'tl';

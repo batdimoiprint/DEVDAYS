@@ -1,36 +1,20 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cue-pid
 
-## Getting Started
+A character-matching game. Edit the two name lists, spin the wheel, and reveal a match with a story and an optional AI-generated video.
 
-First, run the development server:
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. You can also enter two names directly.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Google Veo video
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Create a Gemini API key in [Google AI Studio](https://aistudio.google.com/apikey) and enable billing for the Google project. Veo is a paid service; check [Google's current pricing](https://ai.google.dev/gemini-api/docs/pricing) before use.
+2. Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY` and a long, private `VIDEO_ACCESS_CODE`.
+3. Restart the server. Enter the access code on a match card to generate a video. Each request can incur charges; share the code only with trusted users.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For Vercel, add both variables in the project's environment settings and redeploy. Keep both values secret and never commit them. The access code gates this small shared installation; use proper user authentication, rate limits and billing controls before offering video generation publicly.
