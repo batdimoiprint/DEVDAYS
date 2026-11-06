@@ -66,11 +66,13 @@
   .close-modal{position:absolute;z-index:2;right:12px;top:12px;border:0;background:transparent;color:var(--deep);font-size:1.5rem;cursor:pointer}
   .video-code{margin-top:8px;border:1px solid #ead0df}
   .video-note{font-size:.8rem;line-height:1.4}
-  .video-placeholder{display:grid;place-items:center;aspect-ratio:16/9;margin-top:14px;border-radius:10px;background:#e8dfe7;color:#514353;font-size:.9rem}
+  .video-placeholder{display:grid;place-content:center;justify-items:center;gap:12px;aspect-ratio:16/9;margin-top:14px;border-radius:10px;background:#e8dfe7;color:#514353;font-size:1rem}
+  .video-spinner{width:28px;height:28px;border:3px solid #c9b9c8;border-top-color:#a51f50;border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
   video{display:block;width:100%;border-radius:10px;margin-top:14px}
   video[hidden]{display:none}
   button:disabled{opacity:.55;cursor:wait}
-  @media(prefers-reduced-motion:reduce){.wheel{transition-duration:.01s}}
+  @media(prefers-reduced-motion:reduce){.wheel{transition-duration:.01s}.video-spinner{animation:none}}
 
 </style>
 </head>
@@ -938,23 +940,33 @@ $('#spinWheel').onclick=()=>{
   setTimeout(()=>{button.disabled=false;$('#femaleNames').disabled=false;$('#maleNames').disabled=false;$('#spinResult').textContent=chosen.join(' + ');$('#n1').value=chosen[0];$('#n2').value=chosen[1];$('#goDuo').click()},delay);
 };
 
+let demoTimer;
 function showDemoVideo(match){
+  clearTimeout(demoTimer);
   const status=$('.ai-status');if(!status)return;
   const src=match.a==='Gehlee'&&match.b==='Jeo Ong' ? '/gehlee-jeo.mp4'
     : match.a==='Queen Leng'&&match.b==='Xander Ford' ? '/queen-leng-xander-ford.mp4'
     : match.a==='Kara David'&&match.b==='Dinorobong Tubo' ? '/kara-david-dinorobong-tubo.mp4' : null;
   if(!src){status.textContent='Video coming soon.';return}
   const placeholder=document.createElement('div');
-  placeholder.className='video-placeholder';placeholder.textContent='Loading video...';
+  placeholder.className='video-placeholder';
+  placeholder.innerHTML='<span class="video-spinner" aria-hidden="true"></span><span>Generating video...</span>';
   const video=document.createElement('video');
-  video.controls=true;video.muted=true;video.autoplay=true;video.playsInline=true;video.hidden=true;
+  video.controls=true;video.muted=true;video.playsInline=true;video.hidden=true;
+  let ready=false,screenComplete=false;
   status.setAttribute('aria-busy','true');
-  video.addEventListener('loadeddata',()=>{placeholder.remove();video.hidden=false;status.setAttribute('aria-busy','false')},{once:true});
-  video.addEventListener('error',()=>{status.setAttribute('aria-busy','false');status.textContent='Video could not be loaded.'},{once:true});
+  const reveal=()=>{
+    if(!ready||!screenComplete||!status.isConnected||!$('#out').open||!status.contains(video))return;
+    placeholder.remove();video.hidden=false;status.setAttribute('aria-busy','false');
+    video.play().catch(()=>{});
+  };
+  video.addEventListener('loadeddata',()=>{ready=true;reveal()},{once:true});
+  video.addEventListener('error',()=>{clearTimeout(demoTimer);status.setAttribute('aria-busy','false');status.textContent='Video could not be loaded.'},{once:true});
   status.replaceChildren(placeholder,video);video.src=src;
+  demoTimer=setTimeout(()=>{screenComplete=true;reveal()},3000);
 }
 
-$('#out').addEventListener('close',()=>{$('#out video')?.pause()});
+$('#out').addEventListener('close',()=>{clearTimeout(demoTimer);$('#out video')?.pause()});
 
 $('#goDuo').onclick=()=>{
   const a=$('#n1').value.trim(),b=$('#n2').value.trim();
