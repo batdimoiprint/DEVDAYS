@@ -941,7 +941,8 @@ $('#spinWheel').onclick=()=>{
 function showDemoVideo(match){
   const status=$('.ai-status');if(!status)return;
   const src=match.a==='Gehlee'&&match.b==='Jeo Ong' ? '/gehlee-jeo.mp4'
-    : match.a==='Queen Leng'&&match.b==='Xander Ford' ? '/queen-leng-xander-ford.mp4' : null;
+    : match.a==='Queen Leng'&&match.b==='Xander Ford' ? '/queen-leng-xander-ford.mp4'
+    : match.a==='Kara David'&&match.b==='Dinorobong Tubo' ? '/kara-david-dinorobong-tubo.mp4' : null;
   if(!src){status.textContent='Video coming soon.';return}
   const placeholder=document.createElement('div');
   placeholder.className='video-placeholder';placeholder.textContent='Loading video...';

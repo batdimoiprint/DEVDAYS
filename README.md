@@ -13,4 +13,4 @@ Open http://localhost:3000.
 
 ## Match videos
 
-The match modal plays `public/gehlee-jeo.mp4` for Gehlee and Jeo Ong and `public/queen-leng-xander-ford.mp4` for Queen Leng and Xander Ford. Kara David and Dinorobong Tubo show a waiting message until their video is added. The page does not call the retained Veo API.
+The match modal plays `public/gehlee-jeo.mp4` for Gehlee and Jeo Ong and `public/queen-leng-xander-ford.mp4` for Queen Leng and Xander Ford. Kara David and Dinorobong Tubo play `public/kara-david-dinorobong-tubo.mp4`. The page does not call the retained Veo API.
